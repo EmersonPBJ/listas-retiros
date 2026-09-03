@@ -7,7 +7,7 @@
    Deixando vazio, o site funciona so no aparelho de quem abriu, usando
    localStorage. Nada quebra, mas nada e compartilhado. */
 
-var SYNC_URL = "";
+var SYNC_URL = "https://listas-retiros-default-rtdb.firebaseio.com";
 
 /* -------- estrutura no banco --------
    /indice/<id>      = {nome, pessoas, refeicoes, periodo, criadoEm}

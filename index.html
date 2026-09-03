@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Compras dos retiros</title>
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=2">
 </head><body>
 
 <div class="wrap">
@@ -42,6 +42,12 @@
     <label for="periodo">Período</label>
     <input id="periodo" placeholder="sábado ao meio-dia até segunda no almoço" autocomplete="off">
     <button id="criar">Criar retiro com a lista padrão</button>
+    <a class="botao-alt" href="cardapio.html">Ou monte pelo cardápio</a>
+    <p class="ajuda" style="margin:10px 0 0">
+      Montando pelo cardápio, você diz o que vai servir em cada refeição e a
+      lista sai com as quantidades já calculadas para o número de pessoas.
+      Bom para quem nunca organizou a cozinha de um retiro.
+    </p>
   </div>
 
   <div class="aviso js-only" id="semsync" style="display:none">
@@ -64,8 +70,8 @@
 
 <div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
 
-<script src="config.js"></script>
-<script src="modelo.js"></script>
+<script src="config.js?v=2"></script>
+<script src="modelo.js?v=2"></script>
 <script>
 document.documentElement.className = '';
 

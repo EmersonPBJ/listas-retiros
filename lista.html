@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lista de compras</title>
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=2">
 </head><body>
 
 <div class="wrap">
@@ -30,6 +30,7 @@
   <div class="close">
     <b>Observações da cozinha</b>
     <div id="obs" contenteditable="true"></div>
+    <a class="botao-alt js-only" id="editar-cardapio" href="#" style="display:none">Editar o cardápio e recalcular</a>
     <button class="reset js-only" id="reset">Restaurar lista original</button>
   </div>
 
@@ -53,8 +54,8 @@
   <span id="status">tudo salvo</span>
 </div>
 
-<script src="config.js"></script>
-<script src="modelo.js"></script>
+<script src="config.js?v=2"></script>
+<script src="modelo.js?v=2"></script>
 <script>
 document.documentElement.className = '';
 
@@ -70,6 +71,7 @@ var CHAVE = chaveLista(ID);
 var meta = {nome:'Lista de compras', pessoas:'', refeicoes:'', periodo:''};
 var data = [];
 var obs = '';
+var cardapio = null;
 var localV = 0, polling = null;
 var listEl = document.getElementById('list');
 var obsEl = document.getElementById('obs');
@@ -156,9 +158,26 @@ function paint(){
   }
 }
 
+/* So aparece para retiro que nasceu de um cardapio montado. Retiro criado
+   com a lista padrao nao tem receita para recalcular. */
+function mostrarLinkCardapio(){
+  var a = document.getElementById('editar-cardapio');
+  if (!a) return;
+  if (cardapio){
+    a.href = 'cardapio.html?r=' + encodeURIComponent(ID);
+    a.style.display = '';
+  } else {
+    a.style.display = 'none';
+  }
+}
+
 /* ---------- persistencia ---------- */
 
-function pacote(){ return {v: localV, data: data, obs: obs, meta: meta}; }
+function pacote(){
+  var p = {v: localV, data: data, obs: obs, meta: meta};
+  if (cardapio) p.cardapio = cardapio;
+  return p;
+}
 
 function save(){
   var ok = lsGravar(CHAVE, JSON.stringify(pacote()));
@@ -174,6 +193,8 @@ function aplicar(pkg){
   data = pkg.data;
   obs = typeof pkg.obs === 'string' ? pkg.obs : obs;
   if (pkg.meta) meta = pkg.meta;
+  if (pkg.cardapio) cardapio = pkg.cardapio;
+  mostrarLinkCardapio();
   obsEl.textContent = obs;
   renderMeta();
   render();

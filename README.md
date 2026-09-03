@@ -1,10 +1,11 @@
 # Compras dos retiros
 
 Listas de compras editáveis e compartilhadas para os retiros da igreja. A tela
-inicial lista os retiros, cada um com a sua lista própria. Quem está no mercado
-abre o link no celular, vai marcando o que já pegou, e todo mundo que estiver
-com a página aberta vê a marcação aparecer em poucos segundos. No fim dá para
-imprimir ou salvar em PDF.
+inicial lista os retiros, cada um com a sua lista própria. Dá para começar da
+lista padrão ou montar o cardápio e deixar as quantidades serem calculadas para
+o número de pessoas. Quem está no mercado abre o link no celular, vai marcando o
+que já pegou, e todo mundo que estiver com a página aberta vê a marcação
+aparecer em poucos segundos. No fim dá para imprimir ou salvar em PDF.
 
 No ar em https://emersonpbj.github.io/listas-retiros/
 
@@ -23,9 +24,11 @@ Não tem build, não tem dependência, não tem npm. São arquivos estáticos.
 | --- | --- |
 | `index.html` | tela inicial: lista os retiros, cria e apaga |
 | `lista.html` | a lista de um retiro, aberta como `lista.html?r=<id>` |
+| `cardapio.html` | monta o cardápio e gera a lista com as quantidades calculadas |
 | `config.js` | endereço do banco e a camada de sincronização |
-| `modelo.js` | lista padrão de 62 itens que todo retiro novo recebe |
-| `app.css` | estilo das duas páginas, incluindo a folha de impressão |
+| `modelo.js` | lista padrão de 62 itens, para quem quer começar pronto |
+| `receitas.js` | catálogo de pratos e o gerador de lista a partir do cardápio |
+| `app.css` | estilo das três páginas, incluindo a folha de impressão |
 
 A `SYNC_URL` aparece em um lugar só, no topo do `config.js`. Trocou ali, trocou
 em todo lado.
@@ -62,7 +65,7 @@ Dois ramos:
 
 ```
 /indice/<id>   = {nome, pessoas, refeicoes, periodo, criadoEm}
-/retiros/<id>  = {v, data, obs, meta}
+/retiros/<id>  = {v, data, obs, meta, cardapio?}
 ```
 
 O `indice` existe por um motivo prático: a tela inicial precisa mostrar os nomes
@@ -79,6 +82,8 @@ Dentro de `/retiros/<id>`:
 - `obs` é o texto livre de observações da cozinha, editável no rodapé.
 - `meta` é uma cópia do que está no índice, para a lista abrir com o cabeçalho
   certo mesmo se o índice ainda não tiver chegado.
+- `cardapio` só existe em retiro que nasceu do gerador, e guarda
+  `{dias, refeicoes, extras}` para dar para reabrir e recalcular depois.
 
 ### Escrita
 
@@ -149,19 +154,100 @@ O que a folha de impressão faz, no bloco `@media print` do `app.css`:
   cortar "Açougue" no meio.
 - Carimba data, hora e quantos itens já estavam no carrinho.
 
+## O gerador de lista pelo cardápio
+
+`cardapio.html` faz o caminho inverso da lista: em vez de escrever item por
+item, você diz quantas pessoas, quantos dias e o que vai ser servido em cada
+refeição. A lista sai pronta, com as quantidades calculadas e agrupadas por
+seção de mercado.
+
+### De onde vêm os números
+
+Da lista real do 6º Acamps 7 Jovens, que era para 45 pessoas em 3 dias.
+Dividindo aquelas quantidades por 45 e por 3, saem taxas limpas: água 0,6667 L
+por pessoa por dia, óleo 0,037 L, guardanapo 0,0444 pacote. A lista é
+internamente consistente nessa conta, o que indica que foi feita por quem sabia
+o que estava fazendo. O catálogo é essa lista convertida em taxa, não um chute.
+
+A prova disso está no próprio repositório: rodando o gerador com o cardápio
+original daquele retiro, 59 dos 62 itens saem idênticos à lista comprada, e os
+3 restantes ficam dentro de 20%, sempre para cima, por arredondamento de item
+contável.
+
+Os pratos marcados com `estimado: true` em `receitas.js` são a exceção:
+churrasco, cachorro-quente, strogonoff, sopa e polenta não vieram daquele
+retiro. Aparecem com um `~` na tela.
+
+### As três escalas
+
+| tipo | escala com | exemplos |
+| --- | --- | --- |
+| `BASICOS_DIA` | pessoas × dias | água, café, guardanapo, detergente |
+| `BASICOS_PESSOA` | pessoas | tempero completo, pimenta, vinagre |
+| `BASICOS_FIXO` | nada | botijão de gás, café solúvel |
+| `PRATOS` | pessoas × vezes servido | os ingredientes de cada prato |
+
+A separação importa: água escala com o tempo de permanência, tempero não. Um
+retiro de 5 dias com as mesmas 45 pessoas precisa de mais água e do mesmo
+vidro de shoyu.
+
+`EXTRAS` é a lista de restrições alimentares e opcionais, que só entram se a
+pessoa marcar. É o tipo de item que quem nunca organizou retiro esquece.
+
+### Arredondamento
+
+Quantidade de mercado, não de laboratório. Peso e volume caem de meio em meio
+quando passam de 3, de quarto em quarto entre 1 e 3, e abaixo de 1 viram grama
+ou mililitro de 50 em 50. Contáveis sempre sobem, porque faltar é pior que
+sobrar, e acima de 20 sobem de 5 em 5, que é como se compra pão.
+
+### Regerar
+
+O cardápio fica guardado junto com a lista, em `cardapio`, então dá para voltar
+e recalcular quando o número de pessoas muda. Duas coisas importam nesse
+momento: quantidade editada na mão se perde, e a página avisa antes quando
+detecta que houve edição manual; já o que a equipe marcou como comprado é
+transportado por nome para a lista nova, porque zerar o carrinho de quem está
+no meio do mercado seria cruel.
+
+## Cache dos arquivos
+
+As referências a `app.css`, `config.js`, `modelo.js` e `receitas.js` carregam
+`?v=<número>`. **Ao editar qualquer um desses quatro, incremente o número nos
+três HTML.** Sem isso, quem já abriu o site continua com o arquivo velho em
+cache, e o sintoma é traiçoeiro: a página parece funcionar mas não sincroniza,
+porque está rodando um `config.js` antigo com a `SYNC_URL` vazia.
+
 ## Configurando o Firebase
 
-1. Crie um projeto no console do Firebase e habilite o Realtime Database.
-2. Copie a URL do banco, algo como
-   `https://seu-projeto-default-rtdb.firebaseio.com`.
-3. Cole essa URL na constante `SYNC_URL`, no topo do `config.js`, e faça commit.
-4. Nas regras do banco, libere leitura e escrita em `indice` e `retiros`.
+Já está configurado, apontando para
+`https://listas-retiros-default-rtdb.firebaseio.com`. Para apontar para outro
+banco, troque a `SYNC_URL` no topo do `config.js` e incremente o `?v=` nos três
+HTML.
 
-Sobre as regras: uma lista de compras de retiro não tem dado sensível, e o
+### As regras do banco
+
+O modo de teste do Firebase **expira em 30 dias** e depois bloqueia tudo, e o
+sintoma é a lista simplesmente parar de sincronizar. Substitua pelas regras
+abaixo, em Realtime Database → Regras:
+
+```json
+{
+  "rules": {
+    "indice":  { ".read": true, ".write": true },
+    "retiros": { ".read": true, ".write": true }
+  }
+}
+```
+
+Isso libera só os dois ramos que o app usa e não expira. O resto do banco fica
+fechado.
+
+Sobre segurança: uma lista de compras de retiro não tem dado sensível, e o
 projeto não tem login, então o modo aberto é aceitável enquanto o link circula
 só no grupo. Mas vale saber que **quem tem o link tem escrita**, e que a URL do
-banco fica visível no `config.js`, que é público. Duas defesas baratas: pôr uma
-data de expiração nas regras, ou trocar a URL do banco depois do retiro.
+banco fica visível no `config.js`, que é público. Se um dia isso incomodar, o
+caminho é exigir um token na URL ou pôr autenticação anônima do Firebase.
 
 ## Os botões da lista
 
