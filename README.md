@@ -29,6 +29,7 @@ Não tem build, não tem dependência, não tem npm. São arquivos estáticos.
 | `modelo.js` | lista padrão de 62 itens, para quem quer começar pronto |
 | `receitas.js` | catálogo de pratos e o gerador de lista a partir do cardápio |
 | `app.css` | estilo das três páginas, incluindo a folha de impressão |
+| `database.rules.json` | regras de segurança do banco, versionadas |
 
 A `SYNC_URL` aparece em um lugar só, no topo do `config.js`. Trocou ali, trocou
 em todo lado.
@@ -64,13 +65,23 @@ dbURL('retiros/acamps-7-jovens-k3f9')
 Dois ramos:
 
 ```
-/indice/<id>   = {nome, pessoas, refeicoes, periodo, criadoEm}
+/indice/<id>   = {nome, pessoas, refeicoes, periodo, criadoEm, progresso}
 /retiros/<id>  = {v, data, obs, meta, cardapio?}
 ```
 
 O `indice` existe por um motivo prático: a tela inicial precisa mostrar os nomes
 dos retiros, e sem ele teria que baixar a lista inteira de cada um só para ler
 o título. Com o índice, a home carrega com um `GET` só.
+
+O `progresso` é `{feitos, todos}` e existe pelo mesmo motivo: a tela inicial
+mostra "12/62 no carrinho" sem precisar baixar as listas. Quem publica é a
+`publicarProgresso()` em `lista.html`, com um `PATCH` pequeno, e só quando o
+placar muda de verdade, senão gastaria uma requisição a cada tecla digitada.
+
+Detalhe que já causou bug: a publicação acontece dentro de `aplicar()`, depois
+que os dados reais chegaram, e não em `iniciar()`. No `iniciar()` a lista ainda
+pode ser o modelo padrão de 62 itens, e o placar publicado não seria o desta
+lista.
 
 Dentro de `/retiros/<id>`:
 
@@ -227,21 +238,27 @@ HTML.
 
 ### As regras do banco
 
-O modo de teste do Firebase **expira em 30 dias** e depois bloqueia tudo, e o
-sintoma é a lista simplesmente parar de sincronizar. Substitua pelas regras
-abaixo, em Realtime Database → Regras:
+As regras vivem em `database.rules.json`, versionadas junto com o código. Elas
+liberam leitura e escrita só em `indice` e `retiros`, os dois ramos que o app
+usa, e **não expiram**. O resto do banco fica fechado.
 
-```json
-{
-  "rules": {
-    "indice":  { ".read": true, ".write": true },
-    "retiros": { ".read": true, ".write": true }
-  }
-}
+Isso importa porque o modo de teste do Firebase, que é o padrão ao criar o
+banco, expira em 30 dias e depois bloqueia tudo. O sintoma é traiçoeiro: a
+lista simplesmente para de sincronizar, sem erro visível na tela.
+
+Para publicar as regras:
+
+```
+firebase deploy --only database
 ```
 
-Isso libera só os dois ramos que o app usa e não expira. O resto do banco fica
-fechado.
+Precisa estar logado (`firebase login`) na conta Google **dona do projeto**.
+Uma conta que não é dona falha com "Failed to get details for project", e
+`firebase projects:list` volta vazio, que é o jeito rápido de descobrir se
+você está na conta errada.
+
+Dá para colar as mesmas regras à mão no console, em Realtime Database →
+Regras, mas aí elas saem do controle de versão.
 
 Sobre segurança: uma lista de compras de retiro não tem dado sensível, e o
 projeto não tem login, então o modo aberto é aceitável enquanto o link circula

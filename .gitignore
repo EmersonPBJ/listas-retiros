@@ -12,3 +12,8 @@ Thumbs.db
 *.bak
 *.tmp
 *.log
+
+# Firebase CLI (cache local, nao vai para o repositorio)
+.firebase/
+firebase-debug.log
+database-debug.log

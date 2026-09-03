@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "indice": {
+      ".read": true,
+      ".write": true
+    },
+    "retiros": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
