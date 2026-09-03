@@ -2,211 +2,54 @@
 <html lang="pt-BR" class="no-js"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lista de compras 6º Acamps 7 Jovens</title>
-<style>
-  :root{
-    --paper:#ffffff; --ink:#16241d; --green:#2f6b4f;
-    --muted:#6b7a72; --line:#e3e8e5; --alert:#9b2c2c; --alert-bg:#fdf4f2;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--paper); color:var(--ink);
-    font-family:Archivo,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
-    font-size:16px; line-height:1.45; -webkit-text-size-adjust:100%;
-  }
-  .wrap{max-width:620px;margin:0 auto;padding:26px 18px 150px;}
-
-  .no-js .js-only{display:none;}
-
-  #setup{
-    margin-top:16px;padding:14px;border:2px dashed var(--green);
-    border-radius:10px;background:#f2f8f5;
-  }
-  #setup h3{margin:0 0 6px;font-size:15px;color:var(--green);}
-  #setup p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.5;}
-  #setup input{
-    width:100%;font-family:inherit;font-size:14px;padding:10px;
-    border:1px solid #c3ccc7;border-radius:7px;margin-bottom:8px;
-  }
-  #setup button{
-    font-family:inherit;font-size:14px;font-weight:600;padding:10px 16px;
-    border-radius:8px;border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer;
-  }
-  #setup.hide{display:none;}
-  .live{
-    display:inline-block;width:8px;height:8px;border-radius:50%;
-    background:#c3ccc7;margin-right:6px;vertical-align:middle;
-  }
-  .live.on{background:#22c55e;}
-
-  .top{border-bottom:3px solid var(--ink);padding-bottom:16px;}
-  .top h1{font-size:29px;font-weight:800;letter-spacing:-.025em;line-height:1.05;margin:0 0 9px;}
-  .facts{display:flex;flex-wrap:wrap;gap:5px 18px;font-size:14px;color:var(--muted);margin:0;}
-  .facts b{color:var(--ink);font-weight:600;}
-
-  .progress{margin-top:16px;display:flex;align-items:baseline;gap:9px;}
-  #done{font-size:42px;font-weight:800;letter-spacing:-.04em;line-height:.9;color:var(--green);}
-  .progress span{font-size:14px;color:var(--muted);}
-  .bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:11px;}
-  .bar i{display:block;height:100%;width:0;background:var(--green);transition:width .25s;}
-  .hint{margin-top:13px;font-size:13px;color:var(--muted);line-height:1.5;}
-
-  section{margin-top:34px;}
-  .head{
-    display:flex;align-items:center;gap:10px;padding-bottom:7px;
-    border-bottom:1px solid var(--line);position:sticky;top:0;
-    background:var(--paper);z-index:2;
-  }
-  .dot{width:11px;height:11px;border-radius:50%;flex:none;}
-  .head h2{font-size:17px;font-weight:600;margin:0;flex:1;}
-  .tally{font-size:13px;color:var(--muted);}
-
-  ul{list-style:none;margin:0;padding:0;}
-  li{
-    border-bottom:1px solid var(--line);
-    display:flex;align-items:center;gap:10px;padding:10px 0;
-  }
-  input[type=checkbox]{
-    appearance:none;-webkit-appearance:none;
-    width:21px;height:21px;margin:0;flex:none;
-    border:1.5px solid #c3ccc7;border-radius:5px;background:#fff;cursor:pointer;
-  }
-  input[type=checkbox]:checked{
-    background:var(--green);border-color:var(--green);
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
-    background-size:15px;background-repeat:no-repeat;background-position:center;
-  }
-  :focus-visible{outline:2px solid var(--green);outline-offset:2px;}
-
-  .qty{
-    font-family:inherit;font-size:21px;font-weight:800;letter-spacing:-.03em;
-    text-align:right;color:var(--ink);width:84px;flex:none;
-    border:0;border-bottom:1.5px dashed #cdd6d1;background:transparent;
-    padding:2px 3px;border-radius:0;
-  }
-  .qty:focus{outline:none;border-bottom-color:var(--green);background:#f2f8f5;}
-  .name{font-size:16px;line-height:1.3;flex:1;min-width:0;}
-  .name small{display:block;font-size:13px;color:var(--muted);margin-top:2px;}
-  .nm:focus,.sb:focus{outline:none;background:#f2f8f5;box-shadow:0 1px 0 var(--green);}
-
-  .kill{
-    border:0;background:transparent;color:#c3ccc7;font-size:22px;line-height:1;
-    padding:6px;cursor:pointer;border-radius:6px;font-family:inherit;flex:none;
-  }
-  .kill:hover{color:var(--alert);background:var(--alert-bg);}
-  li.off .qty,li.off .name{color:#a9b4ae;text-decoration:line-through;text-decoration-color:#cfd8d3;}
-  li.off .name small{color:#bcc5c0;}
-
-  .add{
-    border:0;background:transparent;color:var(--green);font-family:inherit;
-    font-size:14px;font-weight:600;padding:10px 0 2px;cursor:pointer;
-  }
-  .note{
-    background:var(--alert-bg);border-left:3px solid var(--alert);
-    padding:12px 14px;margin-top:13px;font-size:14px;line-height:1.5;
-  }
-  .note b{color:var(--alert);font-weight:600;}
-
-  .close{
-    margin-top:42px;padding-top:17px;border-top:3px solid var(--ink);
-    font-size:14px;color:var(--muted);line-height:1.6;
-  }
-  .close b{color:var(--ink);font-weight:600;display:block;margin-bottom:5px;font-size:15px;}
-  .reset{
-    margin-top:18px;border:1px solid var(--line);background:#fff;color:var(--muted);
-    font-family:inherit;font-size:13px;padding:8px 14px;border-radius:7px;cursor:pointer;
-  }
-
-  .sign{
-    margin-top:34px;padding:18px 0 6px;text-align:center;
-    border-top:1px solid var(--line);
-  }
-  .sign svg{display:block;margin:0 auto 9px;}
-  .sign p{
-    margin:0;font-size:11.5px;letter-spacing:.06em;
-    color:#9aa8a1;line-height:1.7;
-  }
-  .sign b{
-    font-weight:700;color:#0F664F;letter-spacing:.02em;
-  }
-
-  .savebar{
-    position:fixed;left:0;right:0;bottom:0;background:#fff;
-    border-top:1px solid var(--line);
-    padding:11px 14px calc(11px + env(safe-area-inset-bottom));
-    display:flex;align-items:center;gap:10px;z-index:8;
-    box-shadow:0 -4px 16px rgba(0,0,0,.06);
-  }
-  .savebar button{
-    font-family:inherit;font-size:15px;font-weight:600;padding:12px 18px;
-    border-radius:9px;cursor:pointer;border:1px solid var(--green);flex:none;
-  }
-  #save{background:var(--green);color:#fff;}
-  #save.dirty{background:var(--alert);border-color:var(--alert);}
-  #dl2{background:#fff;color:var(--green);}
-  #status{font-size:13px;color:var(--muted);line-height:1.35;flex:1;}
-  #status.dirty{color:var(--alert);font-weight:600;}
-
-  #toast{
-    position:fixed;left:50%;bottom:80px;transform:translate(-50%,200%);
-    background:var(--ink);color:#fff;font-size:14px;padding:12px 16px;
-    border-radius:9px;display:flex;align-items:center;gap:14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.18);transition:transform .22s;z-index:9;max-width:92vw;
-  }
-  #toast.up{transform:translate(-50%,0);}
-  #toast button{
-    border:0;background:transparent;color:#8fd4b0;font-family:inherit;
-    font-size:14px;font-weight:600;cursor:pointer;padding:0;
-  }
-
-  @media (max-width:400px){
-    li{gap:8px;}
-    .qty{width:72px;font-size:19px;}
-    .savebar button{padding:11px 14px;font-size:14px;}
-    #status{font-size:12px;}
-  }
-  @media print{
-    .progress,.bar,.kill,.add,.reset,#toast,.hint,.savebar{display:none;}
-    .head{position:static;}
-    .qty{border:0;}
-    body{font-size:12pt;}
-    li{break-inside:avoid;}
-    .wrap{padding-bottom:20px;}
-  }
-</style></head><body>
+<title>Compras dos retiros</title>
+<link rel="stylesheet" href="app.css">
+</head><body>
 
 <div class="wrap">
   <div class="top">
-    <h1>Lista de compras<br>6º Acamps 7 Jovens</h1>
+    <h1>Compras<br>dos retiros</h1>
     <p class="facts">
-      <span><b>45</b> pessoas</span>
-      <span><b>8</b> refeições</span>
-      <span>sábado ao meio-dia até segunda no almoço</span>
+      <span>cada retiro com a sua lista</span>
     </p>
-    <div class="progress">
-      <strong id="done">0</strong>
-      <span>de <span id="total">62</span> itens no carrinho</span>
-    </div>
-    <div class="bar"><i id="fill"></i></div>
-    <p class="hint"><span class="live" id="live"></span><span id="livetxt">Marque os itens conforme for pegando. Para editar, toque na quantidade ou no nome.</span></p>
-
-    <div id="setup" class="js-only hide">
-      <h3>Ligar a sincronização</h3>
-      <p>Cole aqui o endereço do seu Firebase Realtime Database. Depois toque em gravar: o arquivo baixado já sai com a sincronização ligada, e é esse que você sobe para a hospedagem.</p>
-      <input id="syncurl" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" inputmode="url">
-      <button id="syncsave">Gravar e baixar</button>
-    </div>
+    <p class="hint">
+      <span class="live" id="live"></span>
+      <span id="livetxt">Carregando os retiros...</span>
+    </p>
   </div>
 
-  <div id="list"><section><div class="head"><span class="dot" style="background:#c2410c"></span><h2>Açougue</h2><span class="tally">0/7</span></div><ul><li data-si="0" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="8 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Salsichão</span><small class="sb" contenteditable="true">almoço de sábado</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="0" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="10 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Sobrecoxa</span><small class="sb" contenteditable="true">arroz com galinha, domingo à noite</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="0" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="7 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Peito de frango</span><small class="sb" contenteditable="true">2,5 kg salpicão e 4,5 kg delícia de frango</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="0" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="5,5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Carne moída</span><small class="sb" contenteditable="true">guisado da massa, sábado à noite</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="0" data-ii="4"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Paleta ou patinho em cubos</span><small class="sb" contenteditable="true">carreteiro de domingo</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="0" data-ii="5"><input type="checkbox" aria-label="comprado"><input class="qty" value="1,5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Linguiça calabresa</span><small class="sb" contenteditable="true">tempero do feijão</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="0" data-ii="6"><input type="checkbox" aria-label="comprado"><input class="qty" value="500 g" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Bacon</span></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="0">+ adicionar item em açougue</button></section><section><div class="head"><span class="dot" style="background:#0369a1"></span><h2>Frios e laticínios</h2><span class="tally">0/11</span></div><ul><li data-si="1" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="30 L" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Leite</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="4 L" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Leite sem lactose</span><small class="sb" contenteditable="true">pedido no cardápio, não esquecer</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Maionese</span><small class="sb" contenteditable="true">balde grande sai mais em conta</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="12 cx" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Creme de leite</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="4"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Requeijão</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="5"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Patê</span><small class="sb" contenteditable="true">cafés de domingo e segunda</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="6"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Presunto</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="7"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Queijo fatiado</span><small class="sb" contenteditable="true">sanduíche do lanche de sábado</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="8"><input type="checkbox" aria-label="comprado"><input class="qty" value="1,5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Mussarela</span><small class="sb" contenteditable="true">para gratinar a delícia de frango</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="9"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Margarina</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="1" data-ii="10"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 dz" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Ovos</span></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="1">+ adicionar item em frios e laticínios</button></section><section><div class="head"><span class="dot" style="background:#15803d"></span><h2>Hortifruti</h2><span class="tally">0/8</span></div><ul><li data-si="2" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="20 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Frutas</span><small class="sb" contenteditable="true">banana, maçã e laranja</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="8 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Tomate italiano</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="8 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Cenoura</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Cebola</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="4"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Beterraba</span><small class="sb" contenteditable="true">entra na salada verde do cardápio</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="5"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Batata inglesa</span><small class="sb" contenteditable="true">maionese de sábado e salada de segunda</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="6"><input type="checkbox" aria-label="comprado"><input class="qty" value="12 pés" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Alface</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="2" data-ii="7"><input type="checkbox" aria-label="comprado"><input class="qty" value="4 maços" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Cebolinha e salsa</span></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="2">+ adicionar item em hortifruti</button></section><section><div class="head"><span class="dot" style="background:#7c3aed"></span><h2>Mercearia</h2><span class="tally">0/13</span></div><ul><li data-si="3" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="15 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Arroz</span><small class="sb" contenteditable="true">carreteiro, arroz com galinha e segunda</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Feijão preto</span><small class="sb" contenteditable="true">rende o almoço e a janta de domingo</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Massa parafuso ou penne</span><small class="sb" contenteditable="true">jantar de sábado</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Batata palha</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="4"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 L" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Óleo</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="5"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Sal</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="6"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Farinha de trigo</span><small class="sb" contenteditable="true">molho branco da delícia de frango</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="7"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 L" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Molho de tomate</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="8"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Extrato de tomate</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="9"><input type="checkbox" aria-label="comprado"><input class="qty" value="8 latas" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Milho verde</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="10"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 latas" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Ervilha</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="11"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 L" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Vinagre</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="3" data-ii="12"><input type="checkbox" aria-label="comprado"><input class="qty" value="5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Açúcar</span></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="3">+ adicionar item em mercearia</button></section><section><div class="head"><span class="dot" style="background:#a16207"></span><h2>Temperos</h2><span class="tally">0/4</span></div><ul><li data-si="4" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 potes" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Tempero completo</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="4" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 saq" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Pimenta do reino</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="4" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 pote" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Pasta de alho</span><small class="sb" contenteditable="true">o grande</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="4" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 frasco" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Molho shoyu</span></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="4">+ adicionar item em temperos</button></section><section><div class="head"><span class="dot" style="background:#be123c"></span><h2>Bebidas</h2><span class="tally">0/6</span></div><ul><li data-si="5" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="90 L" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Água</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="5" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="50 pct" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Suco em pó</span><small class="sb" contenteditable="true">menos pacotes se pegar o concentrado grande</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="5" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="1,5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Café passado</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="5" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 vidro" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Café solúvel</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="5" data-ii="4"><input type="checkbox" aria-label="comprado"><input class="qty" value="1,5 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Nescau</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="5" data-ii="5"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 kg" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Erva-mate</span><small class="sb" contenteditable="true">só se a organização não pedir que cada um leve a sua</small></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="5">+ adicionar item em bebidas</button></section><section><div class="head"><span class="dot" style="background:#0f766e"></span><h2>Padaria</h2><span class="tally">0/3</span></div><ul><li data-si="6" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="80 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Pão cacetinho</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="6" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="20 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Pão caseiro</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="6" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="8 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Bolos</span></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="6">+ adicionar item em padaria</button><p class="note"><b>Encomende com antecedência.</b> São 4 refeições que puxam pão: almoço de sábado, lanche de sábado e os dois cafés da manhã. Peça para a padaria entregar dividido por dia, senão o de segunda chega velho.</p></section><section><div class="head"><span class="dot" style="background:#db2777"></span><h2>Sobremesas</h2><span class="tally">0/2</span></div><ul><li data-si="7" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="150 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Merenguinho, mariola e pirulito</span><small class="sb" contenteditable="true">3 refeições pedem sobremesa</small></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="7" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 pct" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Gelatina ou pudim</span><small class="sb" contenteditable="true">sobremesa de domingo</small></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="7">+ adicionar item em sobremesas</button></section><section><div class="head"><span class="dot" style="background:#475569"></span><h2>Limpeza e descartáveis</h2><span class="tally">0/8</span></div><ul><li data-si="8" data-ii="0"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 pct" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Guardanapo</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="1"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 rolos" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Papel toalha</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="2"><input type="checkbox" aria-label="comprado"><input class="qty" value="4 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Detergente</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="3"><input type="checkbox" aria-label="comprado"><input class="qty" value="6 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Esponja de louça</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="4"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 pct" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Saco de lixo 100 L</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="5"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 rolos" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Papel alumínio</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="6"><input type="checkbox" aria-label="comprado"><input class="qty" value="1 rolo" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Filme plástico</span></span><button class="kill js-only" aria-label="remover">×</button></li><li data-si="8" data-ii="7"><input type="checkbox" aria-label="comprado"><input class="qty" value="2 un" aria-label="quantidade"><span class="name"><span class="nm" contenteditable="true">Botijão de gás</span><small class="sb" contenteditable="true">conferir se estão cheios antes de subir</small></span><button class="kill js-only" aria-label="remover">×</button></li></ul><button class="add js-only" data-si="8">+ adicionar item em limpeza e descartáveis</button></section></div>
+  <ul class="retiros" id="retiros"></ul>
 
-  <div class="close">
-    <b>Duas coisas para não passar batido na cozinha</b>
-    O feijão de domingo precisa ser feito de uma vez só, em panela grande, porque o mesmo feijão serve o almoço e a janta. Se fizer justo para o almoço, não sobra nada.<br><br>
-    Os 8 bolos: se forem assados na cozinha e não doados prontos, entram farinha, ovos, fermento e óleo a mais na conta.
-    <br>
-    <button class="reset js-only" id="reset">Restaurar lista original</button>
+  <div class="vazio" id="vazio" style="display:none">
+    Nenhum retiro criado ainda.<br>
+    Crie o primeiro aqui embaixo: ele já nasce com a lista completa de 62 itens.
   </div>
+
+  <div class="novo js-only">
+    <h3>Criar um retiro</h3>
+    <label for="nome">Nome do retiro</label>
+    <input id="nome" placeholder="7º Acamps 7 Jovens" autocomplete="off">
+    <div class="dois">
+      <div>
+        <label for="pessoas">Pessoas</label>
+        <input id="pessoas" inputmode="numeric" placeholder="45" autocomplete="off">
+      </div>
+      <div>
+        <label for="refeicoes">Refeições</label>
+        <input id="refeicoes" inputmode="numeric" placeholder="8" autocomplete="off">
+      </div>
+    </div>
+    <label for="periodo">Período</label>
+    <input id="periodo" placeholder="sábado ao meio-dia até segunda no almoço" autocomplete="off">
+    <button id="criar">Criar retiro com a lista padrão</button>
+  </div>
+
+  <div class="aviso js-only" id="semsync" style="display:none">
+    <b>Sincronização desligada.</b> Sem o endereço do banco em <code>config.js</code>,
+    cada aparelho enxerga só os retiros que ele mesmo criou. Nada se perde, mas
+    nada é compartilhado com o resto da equipe.
+  </div>
+
   <div class="sign">
     <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
       <g stroke="#9BC65D" stroke-width="2.1" stroke-linecap="round">
@@ -221,282 +64,196 @@
 
 <div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
 
-<div class="savebar js-only">
-  <button id="save">Salvar</button>
-  <button id="dl2">Enviar</button>
-  <span id="status">tudo salvo</span>
-</div>
-
+<script src="config.js"></script>
+<script src="modelo.js"></script>
 <script>
 document.documentElement.className = '';
 
-var BASE = [{"t":"Açougue","h":"#c2410c","i":[{"q":"8 kg","n":"Salsichão","s":"almoço de sábado"},{"q":"10 kg","n":"Sobrecoxa","s":"arroz com galinha, domingo à noite"},{"q":"7 kg","n":"Peito de frango","s":"2,5 kg salpicão e 4,5 kg delícia de frango"},{"q":"5,5 kg","n":"Carne moída","s":"guisado da massa, sábado à noite"},{"q":"5 kg","n":"Paleta ou patinho em cubos","s":"carreteiro de domingo"},{"q":"1,5 kg","n":"Linguiça calabresa","s":"tempero do feijão"},{"q":"500 g","n":"Bacon","s":""}]},{"t":"Frios e laticínios","h":"#0369a1","i":[{"q":"30 L","n":"Leite","s":""},{"q":"4 L","n":"Leite sem lactose","s":"pedido no cardápio, não esquecer"},{"q":"6 kg","n":"Maionese","s":"balde grande sai mais em conta"},{"q":"12 cx","n":"Creme de leite","s":""},{"q":"1 kg","n":"Requeijão","s":""},{"q":"1 kg","n":"Patê","s":"cafés de domingo e segunda"},{"q":"2 kg","n":"Presunto","s":""},{"q":"2 kg","n":"Queijo fatiado","s":"sanduíche do lanche de sábado"},{"q":"1,5 kg","n":"Mussarela","s":"para gratinar a delícia de frango"},{"q":"1 kg","n":"Margarina","s":""},{"q":"5 dz","n":"Ovos","s":""}]},{"t":"Hortifruti","h":"#15803d","i":[{"q":"20 kg","n":"Frutas","s":"banana, maçã e laranja"},{"q":"8 kg","n":"Tomate italiano","s":""},{"q":"8 kg","n":"Cenoura","s":""},{"q":"6 kg","n":"Cebola","s":""},{"q":"6 kg","n":"Beterraba","s":"entra na salada verde do cardápio"},{"q":"5 kg","n":"Batata inglesa","s":"maionese de sábado e salada de segunda"},{"q":"12 pés","n":"Alface","s":""},{"q":"4 maços","n":"Cebolinha e salsa","s":""}]},{"t":"Mercearia","h":"#7c3aed","i":[{"q":"15 kg","n":"Arroz","s":"carreteiro, arroz com galinha e segunda"},{"q":"6 kg","n":"Feijão preto","s":"rende o almoço e a janta de domingo"},{"q":"5 kg","n":"Massa parafuso ou penne","s":"jantar de sábado"},{"q":"5 kg","n":"Batata palha","s":""},{"q":"5 L","n":"Óleo","s":""},{"q":"2 kg","n":"Sal","s":""},{"q":"1 kg","n":"Farinha de trigo","s":"molho branco da delícia de frango"},{"q":"2 L","n":"Molho de tomate","s":""},{"q":"1 kg","n":"Extrato de tomate","s":""},{"q":"8 latas","n":"Milho verde","s":""},{"q":"6 latas","n":"Ervilha","s":""},{"q":"1 L","n":"Vinagre","s":""},{"q":"5 kg","n":"Açúcar","s":""}]},{"t":"Temperos","h":"#a16207","i":[{"q":"2 potes","n":"Tempero completo","s":""},{"q":"6 saq","n":"Pimenta do reino","s":""},{"q":"1 pote","n":"Pasta de alho","s":"o grande"},{"q":"1 frasco","n":"Molho shoyu","s":""}]},{"t":"Bebidas","h":"#be123c","i":[{"q":"90 L","n":"Água","s":""},{"q":"50 pct","n":"Suco em pó","s":"menos pacotes se pegar o concentrado grande"},{"q":"1,5 kg","n":"Café passado","s":""},{"q":"1 vidro","n":"Café solúvel","s":""},{"q":"1,5 kg","n":"Nescau","s":""},{"q":"2 kg","n":"Erva-mate","s":"só se a organização não pedir que cada um leve a sua"}]},{"t":"Padaria","h":"#0f766e","note":"<b>Encomende com antecedência.</b> São 4 refeições que puxam pão: almoço de sábado, lanche de sábado e os dois cafés da manhã. Peça para a padaria entregar dividido por dia, senão o de segunda chega velho.","i":[{"q":"80 un","n":"Pão cacetinho","s":""},{"q":"20 un","n":"Pão caseiro","s":""},{"q":"8 un","n":"Bolos","s":""}]},{"t":"Sobremesas","h":"#db2777","i":[{"q":"150 un","n":"Merenguinho, mariola e pirulito","s":"3 refeições pedem sobremesa"},{"q":"6 pct","n":"Gelatina ou pudim","s":"sobremesa de domingo"}]},{"t":"Limpeza e descartáveis","h":"#475569","i":[{"q":"6 pct","n":"Guardanapo","s":""},{"q":"6 rolos","n":"Papel toalha","s":""},{"q":"4 un","n":"Detergente","s":""},{"q":"6 un","n":"Esponja de louça","s":""},{"q":"2 pct","n":"Saco de lixo 100 L","s":""},{"q":"2 rolos","n":"Papel alumínio","s":""},{"q":"1 rolo","n":"Filme plástico","s":""},{"q":"2 un","n":"Botijão de gás","s":"conferir se estão cheios antes de subir"}]}];
-var SYNC_URL = "";
-var KEY = 'acamps-lista-v6';
-var localV = 0, polling = null, online = false;
-var data = JSON.parse(JSON.stringify(BASE));
-var listEl = document.getElementById('list');
-var lastKill = null, toastTimer = null, dirty = false, lastSaved = null;
+var indice = {};
+var ultimaExclusao = null;
 
 function esc(s){
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-                  .replace(/"/g,'&quot;');
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function rowHTML(item, si, ii){
-  return '<li data-si="' + si + '" data-ii="' + ii + '"' + (item.done ? ' class="off"' : '') + '>'
-    + '<input type="checkbox"' + (item.done ? ' checked' : '') + ' aria-label="comprado">'
-    + '<input class="qty" value="' + esc(item.q) + '" aria-label="quantidade">'
-    + '<span class="name"><span class="nm" contenteditable="true">' + esc(item.n) + '</span>'
-    + (item.s ? '<small class="sb" contenteditable="true">' + esc(item.s) + '</small>' : '')
-    + '</span>'
-    + '<button class="kill js-only" aria-label="remover">\u00d7</button>'
-    + '</li>';
+
+/* ---------- indice local ----------
+   Espelho do que esta no banco, para a tela abrir preenchida sem internet
+   e para o modo so-neste-aparelho funcionar igual. */
+
+function lerIndiceLocal(){
+  var t = lsLer(CHAVE_INDICE);
+  if (!t) return {};
+  try { var o = JSON.parse(t); return (o && typeof o === 'object') ? o : {}; }
+  catch (e) { return {}; }
 }
-function listHTML(d){
-  var out = '';
-  d.forEach(function(sec, si){
-    var got = sec.i.filter(function(x){ return x.done; }).length;
-    out += '<section>'
-      + '<div class="head"><span class="dot" style="background:' + sec.h + '"></span>'
-      + '<h2>' + esc(sec.t) + '</h2>'
-      + '<span class="tally">' + got + '/' + sec.i.length + '</span></div>'
-      + '<ul>';
-    sec.i.forEach(function(item, ii){ out += rowHTML(item, si, ii); });
-    out += '</ul>'
-      + '<button class="add js-only" data-si="' + si + '">+ adicionar item em ' + esc(sec.t.toLowerCase()) + '</button>';
-    if (sec.note) out += '<p class="note">' + sec.note + '</p>';
-    out += '</section>';
-  });
-  return out;
+function gravarIndiceLocal(){ lsGravar(CHAVE_INDICE, JSON.stringify(indice)); }
+
+/* ---------- desenho ---------- */
+
+function progresso(id){
+  var t = lsLer(chaveLista(id));
+  if (!t) return null;
+  try {
+    var pkg = JSON.parse(t);
+    if (!Array.isArray(pkg.data)) return null;
+    var todos = 0, feitos = 0;
+    pkg.data.forEach(function(sec){
+      todos += sec.i.length;
+      feitos += sec.i.filter(function(x){ return x.done; }).length;
+    });
+    return {feitos: feitos, todos: todos};
+  } catch (e) { return null; }
 }
 
 function render(){
-  listEl.innerHTML = listHTML(data);
-  bind();
-  refresh();
-}
-
-function bind(){
-  Array.prototype.forEach.call(listEl.querySelectorAll('li'), function(li){
-    var si = +li.getAttribute('data-si'), ii = +li.getAttribute('data-ii');
-    var item = data[si].i[ii];
-
-    li.querySelector('input[type=checkbox]').addEventListener('change', function(e){
-      item.done = e.target.checked;
-      li.className = item.done ? 'off' : '';
-      refresh(); mark();
-    });
-    li.querySelector('.qty').addEventListener('input', function(e){ item.q = e.target.value; mark(); });
-    li.querySelector('.qty').addEventListener('keydown', function(e){ if (e.key === 'Enter') e.target.blur(); });
-    li.querySelector('.nm').addEventListener('input', function(e){ item.n = e.target.textContent; mark(); });
-    var sb = li.querySelector('.sb');
-    if (sb) sb.addEventListener('input', function(e){ item.s = e.target.textContent; mark(); });
-    li.querySelector('.kill').addEventListener('click', function(){
-      lastKill = {si:si, ii:ii, item:JSON.parse(JSON.stringify(item))};
-      data[si].i.splice(ii, 1);
-      render(); mark();
-      toast(item.n + ' removido');
-    });
+  var ul = document.getElementById('retiros');
+  var ids = Object.keys(indice).sort(function(a, b){
+    return (indice[b].criadoEm || 0) - (indice[a].criadoEm || 0);
   });
 
-  Array.prototype.forEach.call(listEl.querySelectorAll('.add'), function(btn){
-    btn.addEventListener('click', function(){
-      var si = +btn.getAttribute('data-si');
-      data[si].i.push({q:"1 un", n:"Novo item", s:""});
-      render(); mark();
-      var rows = listEl.querySelectorAll('section')[si].querySelectorAll('li');
-      var last = rows[rows.length - 1].querySelector('.nm');
-      last.focus();
-      document.getSelection().selectAllChildren(last);
-    });
+  document.getElementById('vazio').style.display = ids.length ? 'none' : '';
+
+  ul.innerHTML = ids.map(function(id){
+    var r = indice[id];
+    var fatos = [];
+    if (r.pessoas)   fatos.push(r.pessoas + ' pessoas');
+    if (r.refeicoes) fatos.push(r.refeicoes + ' refeições');
+    if (r.periodo)   fatos.push(r.periodo);
+
+    var p = progresso(id);
+    var direita = p && p.todos
+      ? '<b>' + p.feitos + '/' + p.todos + '</b><small>no carrinho</small>'
+      : '<small>abrir</small>';
+
+    return '<li>'
+      + '<a href="lista.html?r=' + encodeURIComponent(id) + '">'
+      +   '<span class="rn">' + esc(r.nome || id) + '</span>'
+      +   (fatos.length ? '<span class="rf">' + esc(fatos.join('  ·  ')) + '</span>' : '')
+      + '</a>'
+      + '<span class="rp">' + direita + '</span>'
+      + '<button class="kill js-only" data-id="' + esc(id) + '" aria-label="apagar retiro">×</button>'
+      + '</li>';
+  }).join('');
+
+  Array.prototype.forEach.call(ul.querySelectorAll('.kill'), function(btn){
+    btn.addEventListener('click', function(){ apagar(btn.getAttribute('data-id')); });
   });
 }
 
-function refresh(){
-  var all = 0, got = 0;
-  var secs = listEl.querySelectorAll('section');
-  data.forEach(function(sec, si){
-    var g = sec.i.filter(function(x){ return x.done; }).length;
-    all += sec.i.length; got += g;
-    if (secs[si]) secs[si].querySelector('.tally').textContent = g + '/' + sec.i.length;
-  });
-  document.getElementById('done').textContent = got;
-  document.getElementById('total').textContent = all;
-  document.getElementById('fill').style.width = all ? (got / all * 100) + '%' : '0%';
-}
+/* ---------- criar ---------- */
 
-function stamp(){
-  var d = new Date();
-  return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
-}
-function paint(){
-  var b = document.getElementById('save'), st = document.getElementById('status');
-  if (dirty){
-    b.classList.add('dirty'); st.classList.add('dirty');
-    st.textContent = 'alterações ainda não salvas';
-  } else {
-    b.classList.remove('dirty'); st.classList.remove('dirty');
-    st.textContent = lastSaved ? ('salvo neste aparelho às ' + lastSaved) : 'tudo salvo';
+document.getElementById('criar').addEventListener('click', function(){
+  var nome = document.getElementById('nome').value.trim();
+  if (!nome){
+    alert('Dê um nome ao retiro, é assim que a equipe vai achar a lista.');
+    document.getElementById('nome').focus();
+    return;
   }
-}
-function mark(){ dirty = true; paint(); save(); push(); }
 
-function save(){
-  var txt = JSON.stringify(data), ok = false;
-  try { if (window.localStorage){ window.localStorage.setItem(KEY, txt); ok = true; } } catch (e) {}
-  try { if (window.storage && window.storage.set){ window.storage.set(KEY, txt); ok = true; } } catch (e) {}
-  if (ok){ dirty = false; lastSaved = stamp(); paint(); }
-  return ok;
-}
-function apply(txt){
-  try {
-    var d = JSON.parse(txt);
-    if (Array.isArray(d) && d.length){ data = d; render(); return true; }
-  } catch (e) {}
-  return false;
-}
-function load(){
-  var got = false;
-  try {
-    var t = window.localStorage && window.localStorage.getItem(KEY);
-    if (t) got = apply(t);
-  } catch (e) {}
-  try {
-    if (window.storage && window.storage.get){
-      window.storage.get(KEY).then(function(r){
-        if (r && r.value && !got) apply(r.value);
-        paint();
-      }).catch(function(){ paint(); });
-      return;
-    }
-  } catch (e) {}
-  paint();
-}
+  var id = gerarId(nome);
+  var meta = {
+    nome: nome,
+    pessoas: document.getElementById('pessoas').value.trim(),
+    refeicoes: document.getElementById('refeicoes').value.trim(),
+    periodo: document.getElementById('periodo').value.trim(),
+    criadoEm: Date.now()
+  };
+  var pacote = {
+    v: Date.now(),
+    data: JSON.parse(JSON.stringify(MODELO)),
+    obs: MODELO_OBS,
+    meta: meta
+  };
 
-function toast(msg){
-  var el = document.getElementById('toast');
-  document.getElementById('toast-msg').textContent = msg;
-  el.classList.add('up');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ el.classList.remove('up'); }, 6000);
+  indice[id] = meta;
+  gravarIndiceLocal();
+  lsGravar(chaveLista(id), JSON.stringify(pacote));
+
+  if (temSync()){
+    var m = {}; m[id] = meta;
+    Promise.all([
+      dbPatch('indice', m),
+      dbPut('retiros/' + id, pacote)
+    ]).then(function(){
+      location.href = 'lista.html?r=' + encodeURIComponent(id);
+    }).catch(function(){
+      toast('Retiro criado só neste aparelho, o banco não respondeu');
+      render();
+    });
+  } else {
+    location.href = 'lista.html?r=' + encodeURIComponent(id);
+  }
+});
+
+/* ---------- apagar ---------- */
+
+function apagar(id){
+  var r = indice[id];
+  if (!r) return;
+  if (!confirm('Apagar "' + (r.nome || id) + '" e a lista dele? Isso vale para todo mundo.')) return;
+
+  /* Guarda a lista antes de sumir com ela, para o Desfazer ter o que devolver. */
+  var backupLista = lsLer(chaveLista(id));
+  ultimaExclusao = {id: id, meta: r, lista: backupLista};
+
+  delete indice[id];
+  gravarIndiceLocal();
+  lsApagar(chaveLista(id));
+  render();
+
+  if (temSync()){
+    Promise.all([
+      dbDelete('indice/' + id),
+      dbDelete('retiros/' + id)
+    ]).catch(function(){ toast('Apagado aqui, mas o banco não respondeu'); });
+  }
+  toast('Retiro apagado', true);
 }
 
 document.getElementById('undo').addEventListener('click', function(){
-  if (!lastKill) return;
-  data[lastKill.si].i.splice(lastKill.ii, 0, lastKill.item);
-  lastKill = null;
+  if (!ultimaExclusao) return;
+  var e = ultimaExclusao;
+  ultimaExclusao = null;
   document.getElementById('toast').classList.remove('up');
-  render(); mark();
-});
-document.getElementById('reset').addEventListener('click', function(){
-  if (!confirm('Voltar para a lista original? As edições se perdem.')) return;
-  data = JSON.parse(JSON.stringify(BASE));
-  render(); mark();
-});
-document.getElementById('save').addEventListener('click', function(){
-  toast(save() ? 'Lista salva neste aparelho' : 'Não deu para salvar aqui, use o botão Enviar');
-});
-window.addEventListener('beforeunload', function(e){ if (dirty){ e.preventDefault(); e.returnValue = ''; } });
 
-document.getElementById('dl2').addEventListener('click', function(){
-  var clone = document.documentElement.cloneNode(true);
-  clone.className = 'no-js';
-  clone.querySelector('#list').innerHTML = listHTML(data);
-  var t = clone.querySelector('#toast'); if (t) t.classList.remove('up');
-  var st = clone.querySelector('#status'); if (st){ st.className = ''; st.textContent = 'tudo salvo'; }
-  var sv = clone.querySelector('#save'); if (sv) sv.className = '';
-  var dn = clone.querySelector('#done'); if (dn) dn.textContent = '0';
+  indice[e.id] = e.meta;
+  gravarIndiceLocal();
+  if (e.lista) lsGravar(chaveLista(e.id), e.lista);
+  render();
 
-  var out = '<!DOCTYPE html>\n' + clone.outerHTML;
-  out = out.replace(/var BASE = \[[\s\S]*?\];\n/, 'var BASE = ' + JSON.stringify(data) + ';\n');
-  out = out.replace(/var SYNC_URL = "[^"]*";/, 'var SYNC_URL = ' + JSON.stringify(SYNC_URL) + ';');
-
-  var d = new Date();
-  var s = ('0' + d.getDate()).slice(-2) + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
-  var blob = new Blob([out], {type:'text/html;charset=utf-8'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Lista de compras Acamps ' + s + '.html';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
-  toast('Arquivo gerado, agora é só enviar');
-});
-
-function endpoint(){
-  if (!SYNC_URL) return '';
-  return SYNC_URL.replace(/\/+$/, '') + '/lista.json';
-}
-
-function setLive(on, txt){
-  online = on;
-  var dot = document.getElementById('live');
-  if (dot) dot.className = 'live' + (on ? ' on' : '');
-  var t = document.getElementById('livetxt');
-  if (t && txt) t.textContent = txt;
-}
-
-function push(){
-  var url = endpoint();
-  if (!url) return;
-  localV = Date.now();
-  fetch(url, {
-    method: 'PUT',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({v: localV, data: data})
-  }).then(function(r){
-    setLive(r.ok, r.ok ? 'Lista compartilhada, todos veem as mesmas marcações' : 'Sem conexão, salvando só neste aparelho');
-  }).catch(function(){
-    setLive(false, 'Sem conexão, salvando só neste aparelho');
-  });
-}
-
-function busy(){
-  var a = document.activeElement;
-  return a && (a.classList.contains('qty') || a.classList.contains('nm') || a.classList.contains('sb'));
-}
-
-function pull(){
-  var url = endpoint();
-  if (!url) return;
-  fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
-    if (!j){ setLive(true, 'Lista compartilhada, todos veem as mesmas marcações'); return; }
-    if (j.v && j.v > localV && !busy() && Array.isArray(j.data)){
-      data = j.data;
-      localV = j.v;
-      render();
-      try { window.localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
+  if (temSync()){
+    var m = {}; m[e.id] = e.meta;
+    dbPatch('indice', m).catch(function(){});
+    if (e.lista){
+      try { dbPut('retiros/' + e.id, JSON.parse(e.lista)).catch(function(){}); } catch (err) {}
     }
-    setLive(true, 'Lista compartilhada, todos veem as mesmas marcações');
-  }).catch(function(){
-    setLive(false, 'Sem conexão, salvando só neste aparelho');
-  });
-}
+  }
+});
 
-function startSync(){
-  if (!SYNC_URL){
-    var box = document.getElementById('setup');
-    if (box) box.classList.remove('hide');
-    setLive(false, 'Só neste aparelho. Ligue a sincronização abaixo.');
+/* ---------- partida ---------- */
+
+function iniciar(){
+  indice = lerIndiceLocal();
+  render();
+
+  if (!temSync()){
+    document.getElementById('semsync').style.display = '';
+    setLive(false, 'Só neste aparelho. Configure o banco em config.js para compartilhar.');
     return;
   }
-  pull();
-  clearInterval(polling);
-  polling = setInterval(pull, 5000);
+
+  dbGet('indice').then(function(remoto){
+    indice = remoto || {};
+    gravarIndiceLocal();
+    render();
+    setLive(true, 'Retiros compartilhados, todos veem os mesmos');
+  }).catch(function(){
+    setLive(false, 'Sem conexão, mostrando o que está guardado neste aparelho');
+  });
 }
 
-document.getElementById('syncsave').addEventListener('click', function(){
-  var v = document.getElementById('syncurl').value.trim();
-  if (!/^https:\/\//.test(v)){ alert('Cole o endereço completo, começando com https://'); return; }
-  SYNC_URL = v;
-  push();
-  document.getElementById('dl2').click();
-  document.getElementById('setup').classList.add('hide');
-  toast('Sincronização ligada, suba o arquivo baixado na hospedagem');
-});
-
-bind();
-refresh();
-load();
-startSync();
+iniciar();
 </script>
 </body></html>

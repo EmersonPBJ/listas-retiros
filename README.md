@@ -1,23 +1,34 @@
-# Lista de compras dos retiros
+# Compras dos retiros
 
-Lista de compras editável e compartilhada para os retiros da igreja. Quem está no
-mercado abre o link no celular, vai marcando o que já pegou, e todo mundo que
-estiver com a página aberta vê a marcação aparecer em poucos segundos.
+Listas de compras editáveis e compartilhadas para os retiros da igreja. A tela
+inicial lista os retiros, cada um com a sua lista própria. Quem está no mercado
+abre o link no celular, vai marcando o que já pegou, e todo mundo que estiver
+com a página aberta vê a marcação aparecer em poucos segundos. No fim dá para
+imprimir ou salvar em PDF.
 
-Feito para o 6º Acamps 7 Jovens (45 pessoas, 8 refeições, de sábado ao meio-dia
-até segunda no almoço). A lista base já vem preenchida com 62 itens divididos em
-9 seções.
+No ar em https://emersonpbj.github.io/listas-retiros/
 
 ## Como rodar
 
-Não tem build, não tem dependência, não tem npm. É um arquivo HTML só.
+Não tem build, não tem dependência, não tem npm. São arquivos estáticos.
 
-- Local: abra o `index.html` com dois cliques.
+- Local: qualquer servidor estático na pasta, por exemplo
+  `python -m http.server 4173`. Abrir por `file://` não serve, porque o
+  navegador bloqueia o `fetch` do banco nesse esquema.
 - Publicado: GitHub Pages serve a branch `main`, raiz do repositório.
 
-Todo o CSS e todo o JavaScript estão dentro do próprio `index.html`. Isso é
-proposital: o arquivo precisa funcionar sozinho, porque ele também é baixado e
-enviado por WhatsApp pelo botão "Enviar".
+## Os arquivos
+
+| arquivo | o que é |
+| --- | --- |
+| `index.html` | tela inicial: lista os retiros, cria e apaga |
+| `lista.html` | a lista de um retiro, aberta como `lista.html?r=<id>` |
+| `config.js` | endereço do banco e a camada de sincronização |
+| `modelo.js` | lista padrão de 62 itens que todo retiro novo recebe |
+| `app.css` | estilo das duas páginas, incluindo a folha de impressão |
+
+A `SYNC_URL` aparece em um lugar só, no topo do `config.js`. Trocou ali, trocou
+em todo lado.
 
 ## Como a sincronização funciona
 
@@ -27,112 +38,141 @@ o desenho inteiro.
 
 ### O endereço
 
-No topo do `<script>` existe uma constante:
+No topo do `config.js`:
 
 ```js
-var SYNC_URL = "";
+var SYNC_URL = "https://seu-projeto-default-rtdb.firebaseio.com";
 ```
 
-Quando ela está vazia, a página funciona só no aparelho (localStorage) e mostra
-a caixa "Ligar a sincronização". Quando ela tem uma URL, a página monta o
-endpoint assim:
+Vazio, o site funciona só no aparelho de quem abriu, usando localStorage. Nada
+quebra e nada se perde, mas nada é compartilhado, e a tela inicial mostra um
+aviso dizendo isso.
 
-```js
-SYNC_URL.replace(/\/+$/, '') + '/lista.json'
+A função `dbURL()` monta o endereço de cada nó acrescentando `.json` no final,
+que é o que faz o Realtime Database responder via REST:
+
+```
+dbURL('retiros/acamps-7-jovens-k3f9')
+  -> https://<projeto>.firebaseio.com/retiros/acamps-7-jovens-k3f9.json
 ```
 
-Ou seja, `https://seu-projeto-default-rtdb.firebaseio.com` vira
-`https://seu-projeto-default-rtdb.firebaseio.com/lista.json`. O `.json` no final
-é o que faz o Realtime Database responder via REST. Todos os dados ficam em um
-único nó chamado `lista`.
+### O que fica no banco
 
-### O formato gravado
+Dois ramos:
 
-O que vai e volta do banco é sempre este objeto:
-
-```json
-{ "v": 1717430000000, "data": [ ...seções... ] }
+```
+/indice/<id>   = {nome, pessoas, refeicoes, periodo, criadoEm}
+/retiros/<id>  = {v, data, obs, meta}
 ```
 
-- `v` é um `Date.now()` no momento da escrita, funciona como número de versão.
-- `data` é o array de seções, cada seção com `t` (título), `h` (cor do
+O `indice` existe por um motivo prático: a tela inicial precisa mostrar os nomes
+dos retiros, e sem ele teria que baixar a lista inteira de cada um só para ler
+o título. Com o índice, a home carrega com um `GET` só.
+
+Dentro de `/retiros/<id>`:
+
+- `v` é um `Date.now()` do momento da escrita, e funciona como número de versão.
+- `data` é o array de seções. Cada seção tem `t` (título), `h` (cor do
   marcador), `note` (aviso opcional em HTML) e `i` (itens). Cada item tem `q`
   (quantidade), `n` (nome), `s` (subtexto) e `done` (booleano). O `done` só
   aparece no objeto depois que alguém marca o item pela primeira vez.
+- `obs` é o texto livre de observações da cozinha, editável no rodapé.
+- `meta` é uma cópia do que está no índice, para a lista abrir com o cabeçalho
+  certo mesmo se o índice ainda não tiver chegado.
 
 ### Escrita
 
 Qualquer edição chama `mark()`, que faz três coisas: marca a página como suja,
-salva em localStorage e chama `push()`. O `push()` faz um `PUT` no endpoint com
-o objeto acima e atualiza `localV` com o novo timestamp.
+grava em localStorage e chama `push()`. O `push()` faz um `PUT` em
+`/retiros/<id>` com o pacote inteiro e atualiza `localV` com o novo timestamp.
 
 `PUT` substitui o nó inteiro. Não tem merge por campo: quem grava por último
-grava a lista toda.
+grava a lista toda. Criar retiro usa `PATCH` no índice, que acrescenta uma
+chave sem apagar as outras.
 
 ### Leitura
 
-`pull()` faz um `GET` no mesmo endpoint a cada 5 segundos (`setInterval` em
-`startSync()`). A resposta só é aplicada se as três condições valerem:
+`pull()` faz um `GET` no mesmo nó a cada 5 segundos. A resposta só é aplicada se
+as três condições valerem:
 
 1. `j.v > localV`, ou seja, a versão remota é mais nova que a última que este
    aparelho escreveu ou recebeu.
-2. `!busy()`, ou seja, o dedo do usuário não está dentro de um campo de
-   quantidade, nome ou subtexto naquele instante. Sem isso, o poll apagaria o
-   que a pessoa está digitando.
+2. `!digitando()`, ou seja, o cursor não está dentro de um campo de quantidade,
+   nome, subtexto ou observações naquele instante. **Esta é a condição que não
+   é óbvia depois de um ano:** sem ela, o poll de 5 segundos sobrescreveria o
+   que a pessoa está digitando no meio da palavra.
 3. `j.data` é um array.
 
-A bolinha verde ao lado do texto de ajuda é o indicador de conexão, controlado
-por `setLive()`. Cinza quer dizer que o `fetch` falhou e as alterações estão
-indo só para o localStorage.
+A bolinha ao lado do texto de ajuda é o indicador de conexão, controlado por
+`setLive()`. Cinza quer dizer que o `fetch` falhou e as alterações estão indo só
+para o localStorage.
 
 ### Conflito
 
-O modelo é o mais simples possível: último a gravar vence, com granularidade de
-lista inteira. Duas pessoas marcando itens diferentes ao mesmo tempo funcionam
-bem na prática porque o intervalo entre a marcação e o `push` é curto, mas duas
+O modelo é o mais simples possível: último a gravar vence, com o retiro inteiro
+como unidade. Duas pessoas marcando itens diferentes ao mesmo tempo funcionam
+bem na prática, porque a janela entre a marcação e o `push` é curta. Duas
 pessoas editando o mesmo item no mesmo segundo perdem uma das edições. Se um dia
-isso incomodar, o caminho é gravar por item (`/lista/data/<seção>/i/<item>.json`)
-em vez do nó inteiro.
+isso incomodar, o caminho é gravar por item, em
+`/retiros/<id>/data/<seção>/i/<item>.json`, em vez do nó inteiro.
 
 ## Onde os dados moram
 
-Três lugares, nesta ordem de prioridade na hora de carregar:
+Três lugares, nesta ordem de prioridade ao carregar:
 
-1. `localStorage`, chave `acamps-lista-v6`. É o que garante que a lista abre
-   preenchida mesmo sem internet.
-2. Realtime Database, nó `lista`. É a fonte compartilhada.
-3. A constante `BASE` dentro do `index.html`. É a lista original de fábrica, o
-   que o botão "Restaurar lista original" devolve.
+1. `localStorage`, chaves `retiros-indice-v1` para o índice e
+   `retiro-<id>-v1` para cada lista. É o que faz a página abrir preenchida sem
+   internet, situação real de muito sítio de retiro.
+2. Realtime Database, ramos `/indice` e `/retiros`. É a fonte compartilhada.
+3. `modelo.js`, a lista de fábrica. É o ponto de partida de todo retiro novo e o
+   destino do botão "Restaurar lista original".
+
+A página desenha primeiro o que veio do localStorage, para abrir cheia na hora,
+e só depois deixa o banco corrigir se tiver algo mais novo.
+
+## Imprimir e salvar em PDF
+
+O botão "Imprimir ou PDF" chama `window.print()`. Não entra biblioteca de PDF
+aqui de propósito: a caixa de impressão do próprio navegador já tem "Salvar como
+PDF" como destino, no celular e no computador, e o resultado sai com texto
+selecionável em vez de imagem.
+
+O que a folha de impressão faz, no bloco `@media print` do `app.css`:
+
+- Some com tudo que é controle: barra de salvar, botões de adicionar e remover,
+  barra de progresso, link de voltar, avisos.
+- Troca a caixinha verde de marcado por um quadrado vazio com borda preta, e
+  desenha um `X` nos já comprados via `input:checked::after`. Assim a folha
+  serve para marcar a caneta no mercado.
+- Tira o riscado dos itens comprados, que na tela ajuda e no papel atrapalha.
+- Segura cada seção inteira na mesma página com `break-inside: avoid`, para não
+  cortar "Açougue" no meio.
+- Carimba data, hora e quantos itens já estavam no carrinho.
 
 ## Configurando o Firebase
 
 1. Crie um projeto no console do Firebase e habilite o Realtime Database.
 2. Copie a URL do banco, algo como
    `https://seu-projeto-default-rtdb.firebaseio.com`.
-3. Nas regras do banco, libere leitura e escrita no nó `lista`.
-4. Abra a página publicada, cole a URL na caixa "Ligar a sincronização" e toque
-   em "Gravar e baixar". O arquivo baixado já sai com a `SYNC_URL` preenchida.
-5. Suba esse arquivo baixado por cima do `index.html` do repositório.
+3. Cole essa URL na constante `SYNC_URL`, no topo do `config.js`, e faça commit.
+4. Nas regras do banco, libere leitura e escrita em `indice` e `retiros`.
 
 Sobre as regras: uma lista de compras de retiro não tem dado sensível, e o
-projeto não tem login, então o modo aberto é aceitável enquanto o link não
-circula fora do grupo. Vale ao menos limitar por data de expiração ou trocar a
-URL do banco depois do retiro, porque quem tem o link tem escrita.
+projeto não tem login, então o modo aberto é aceitável enquanto o link circula
+só no grupo. Mas vale saber que **quem tem o link tem escrita**, e que a URL do
+banco fica visível no `config.js`, que é público. Duas defesas baratas: pôr uma
+data de expiração nas regras, ou trocar a URL do banco depois do retiro.
 
-## Os botões
+## Os botões da lista
 
-- **Salvar**: grava no localStorage deste aparelho.
-- **Enviar**: gera um novo `index.html` completo, com a lista atual já embutida
-  na constante `BASE` e a `SYNC_URL` preenchida, e baixa esse arquivo. É assim
-  que se congela uma versão para mandar no grupo ou para republicar.
-- **Restaurar lista original**: volta para a `BASE` que está no código.
-- **Desfazer**: reverte a última remoção de item, disponível por 6 segundos.
-
-## Próximo passo
-
-Transformar isso em uma tela inicial com vários retiros, cada um com sua lista
-própria. O caminho natural é trocar o nó único `lista` por `retiros/<id>/lista`
-e ter um `index.html` de seleção mais uma página de lista que lê o id da URL.
+- **Salvar**: grava no localStorage deste aparelho. A sincronização já acontece
+  sozinha a cada edição, então este botão é rede de segurança, não obrigação.
+- **Imprimir ou PDF**: abre a caixa de impressão do navegador.
+- **Restaurar lista original**: volta para o `modelo.js`, perdendo as edições
+  deste retiro.
+- **Desfazer**: reverte a última remoção de item, disponível por 6 segundos. Na
+  tela inicial, reverte também a exclusão de um retiro inteiro, devolvendo a
+  lista com as marcações que ela tinha.
 
 ## Créditos
 

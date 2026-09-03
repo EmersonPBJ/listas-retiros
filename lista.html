@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="no-js"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista de compras</title>
+<link rel="stylesheet" href="app.css">
+</head><body>
+
+<div class="wrap">
+  <a class="back js-only" href="./">&larr; todos os retiros</a>
+
+  <div class="top">
+    <h1 id="titulo">Lista de compras</h1>
+    <p class="facts" id="fatos"></p>
+
+    <div class="progress">
+      <strong id="done">0</strong>
+      <span>de <span id="total">0</span> itens no carrinho</span>
+    </div>
+    <div class="bar"><i id="fill"></i></div>
+    <p class="hint">
+      <span class="live" id="live"></span>
+      <span id="livetxt">Marque os itens conforme for pegando. Para editar, toque na quantidade ou no nome.</span>
+    </p>
+    <p class="impresso" id="impresso"></p>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="close">
+    <b>Observações da cozinha</b>
+    <div id="obs" contenteditable="true"></div>
+    <button class="reset js-only" id="reset">Restaurar lista original</button>
+  </div>
+
+  <div class="sign">
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+      <g stroke="#9BC65D" stroke-width="2.1" stroke-linecap="round">
+        <line x1="12" y1="2.5" x2="12" y2="21.5"/>
+        <line x1="3.8" y1="7.25" x2="20.2" y2="16.75"/>
+        <line x1="3.8" y1="16.75" x2="20.2" y2="7.25"/>
+      </g>
+    </svg>
+    <p>uma contribuição <b>raiseUP</b> para os retiros da igreja</p>
+  </div>
+</div>
+
+<div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
+
+<div class="savebar js-only">
+  <button id="save">Salvar</button>
+  <button id="print">Imprimir ou PDF</button>
+  <span id="status">tudo salvo</span>
+</div>
+
+<script src="config.js"></script>
+<script src="modelo.js"></script>
+<script>
+document.documentElement.className = '';
+
+/* Qual retiro esta aberto vem da URL: lista.html?r=<id>.
+   Sem id, nao ha o que mostrar, entao volta para a tela inicial. */
+var ID = (function(){
+  var m = location.search.match(/[?&]r=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+})();
+if (!ID){ location.replace('./'); }
+
+var CHAVE = chaveLista(ID);
+var meta = {nome:'Lista de compras', pessoas:'', refeicoes:'', periodo:''};
+var data = [];
+var obs = '';
+var localV = 0, polling = null;
+var listEl = document.getElementById('list');
+var obsEl = document.getElementById('obs');
+var ultimaRemocao = null, sujo = false, salvoAs = null;
+
+/* ---------- desenho ---------- */
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function rowHTML(item, si, ii){
+  return '<li data-si="' + si + '" data-ii="' + ii + '"' + (item.done ? ' class="off"' : '') + '>'
+    + '<input type="checkbox"' + (item.done ? ' checked' : '') + ' aria-label="comprado">'
+    + '<input class="qty" value="' + esc(item.q) + '" aria-label="quantidade">'
+    + '<span class="name"><span class="nm" contenteditable="true">' + esc(item.n) + '</span>'
+    + '<small class="sb" contenteditable="true">' + esc(item.s) + '</small>'
+    + '</span>'
+    + '<button class="kill js-only" aria-label="remover">×</button>'
+    + '</li>';
+}
+
+function listHTML(d){
+  var out = '';
+  d.forEach(function(sec, si){
+    var got = sec.i.filter(function(x){ return x.done; }).length;
+    out += '<section>'
+      + '<div class="head"><span class="dot" style="background:' + esc(sec.h) + '"></span>'
+      + '<h2>' + esc(sec.t) + '</h2>'
+      + '<span class="tally">' + got + '/' + sec.i.length + '</span></div>'
+      + '<ul>';
+    sec.i.forEach(function(item, ii){ out += rowHTML(item, si, ii); });
+    out += '</ul>'
+      + '<button class="add js-only" data-si="' + si + '">+ adicionar item em ' + esc(sec.t.toLowerCase()) + '</button>';
+    if (sec.note) out += '<p class="note">' + sec.note + '</p>';
+    out += '</section>';
+  });
+  return out;
+}
+
+function render(){
+  listEl.innerHTML = listHTML(data);
+  bind();
+  refresh();
+}
+
+function renderMeta(){
+  document.getElementById('titulo').textContent = meta.nome || 'Lista de compras';
+  document.title = (meta.nome || 'Lista de compras') + ' | compras do retiro';
+  var partes = [];
+  if (meta.pessoas)   partes.push('<span><b>' + esc(meta.pessoas) + '</b> pessoas</span>');
+  if (meta.refeicoes) partes.push('<span><b>' + esc(meta.refeicoes) + '</b> refeições</span>');
+  if (meta.periodo)   partes.push('<span>' + esc(meta.periodo) + '</span>');
+  document.getElementById('fatos').innerHTML = partes.join('');
+}
+
+function refresh(){
+  var secs = listEl.querySelectorAll('section'), all = 0, got = 0;
+  data.forEach(function(sec, si){
+    var g = sec.i.filter(function(x){ return x.done; }).length;
+    all += sec.i.length; got += g;
+    if (secs[si]) secs[si].querySelector('.tally').textContent = g + '/' + sec.i.length;
+  });
+  document.getElementById('done').textContent = got;
+  document.getElementById('total').textContent = all;
+  document.getElementById('fill').style.width = all ? (got / all * 100) + '%' : '0%';
+}
+
+function hora(){
+  var d = new Date();
+  return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+}
+
+function paint(){
+  var b = document.getElementById('save'), st = document.getElementById('status');
+  if (sujo){
+    b.classList.add('dirty'); st.classList.add('dirty');
+    st.textContent = 'alterações ainda não salvas';
+  } else {
+    b.classList.remove('dirty'); st.classList.remove('dirty');
+    st.textContent = salvoAs ? ('salvo às ' + salvoAs) : 'tudo salvo';
+  }
+}
+
+/* ---------- persistencia ---------- */
+
+function pacote(){ return {v: localV, data: data, obs: obs, meta: meta}; }
+
+function save(){
+  var ok = lsGravar(CHAVE, JSON.stringify(pacote()));
+  if (ok){ sujo = false; salvoAs = hora(); paint(); }
+  return ok;
+}
+
+/* Toda edicao passa por aqui: marca como sujo, grava local e empurra pro banco. */
+function mark(){ sujo = true; paint(); save(); push(); }
+
+function aplicar(pkg){
+  if (!pkg || !Array.isArray(pkg.data) || !pkg.data.length) return false;
+  data = pkg.data;
+  obs = typeof pkg.obs === 'string' ? pkg.obs : obs;
+  if (pkg.meta) meta = pkg.meta;
+  obsEl.textContent = obs;
+  renderMeta();
+  render();
+  return true;
+}
+
+function carregarLocal(){
+  var t = lsLer(CHAVE);
+  if (!t) return false;
+  try { return aplicar(JSON.parse(t)); } catch (e) { return false; }
+}
+
+/* ---------- sincronizacao ----------
+   PUT grava o retiro inteiro. GET a cada 5s traz o que os outros marcaram.
+   O modelo de conflito e "ultimo a gravar vence", com o retiro como unidade. */
+
+function push(){
+  if (!temSync()) return;
+  localV = Date.now();
+  dbPut('retiros/' + ID, pacote()).then(function(){
+    setLive(true, 'Lista compartilhada, todos veem as mesmas marcações');
+  }).catch(function(){
+    setLive(false, 'Sem conexão, salvando só neste aparelho');
+  });
+}
+
+/* Enquanto o dedo esta dentro de um campo, o pull nao pode sobrescrever nada,
+   senao apaga o que a pessoa esta digitando no meio da palavra. */
+function digitando(){
+  var a = document.activeElement;
+  if (!a) return false;
+  return a.classList.contains('qty') || a.classList.contains('nm')
+      || a.classList.contains('sb') || a.id === 'obs';
+}
+
+function pull(){
+  if (!temSync()) return;
+  dbGet('retiros/' + ID).then(function(j){
+    if (j && j.v && j.v > localV && !digitando() && Array.isArray(j.data)){
+      localV = j.v;
+      aplicar(j);
+      lsGravar(CHAVE, JSON.stringify(pacote()));
+    }
+    setLive(true, 'Lista compartilhada, todos veem as mesmas marcações');
+  }).catch(function(){
+    setLive(false, 'Sem conexão, salvando só neste aparelho');
+  });
+}
+
+function startSync(){
+  if (!temSync()){
+    setLive(false, 'Só neste aparelho. Configure o banco em config.js para compartilhar.');
+    return;
+  }
+  pull();
+  clearInterval(polling);
+  polling = setInterval(pull, 5000);
+}
+
+/* ---------- eventos da lista ---------- */
+
+function bind(){
+  Array.prototype.forEach.call(listEl.querySelectorAll('li'), function(li){
+    var si = +li.getAttribute('data-si'), ii = +li.getAttribute('data-ii');
+    var item = data[si].i[ii];
+
+    li.querySelector('input[type=checkbox]').addEventListener('change', function(e){
+      item.done = e.target.checked;
+      li.className = item.done ? 'off' : '';
+      refresh(); mark();
+    });
+    li.querySelector('.qty').addEventListener('input', function(e){ item.q = e.target.value; mark(); });
+    li.querySelector('.qty').addEventListener('keydown', function(e){ if (e.key === 'Enter') e.target.blur(); });
+    li.querySelector('.nm').addEventListener('input', function(e){ item.n = e.target.textContent; mark(); });
+    li.querySelector('.sb').addEventListener('input', function(e){ item.s = e.target.textContent; mark(); });
+
+    li.querySelector('.kill').addEventListener('click', function(){
+      ultimaRemocao = {si: si, ii: ii, item: item};
+      data[si].i.splice(ii, 1);
+      render(); mark();
+      toast('Item removido', true);
+    });
+  });
+
+  Array.prototype.forEach.call(listEl.querySelectorAll('.add'), function(btn){
+    btn.addEventListener('click', function(){
+      var si = +btn.getAttribute('data-si');
+      data[si].i.push({q:'1 un', n:'Item novo', s:''});
+      render(); mark();
+      var ul = listEl.querySelectorAll('section')[si].querySelector('ul');
+      var ultimo = ul.lastElementChild;
+      if (ultimo){
+        var nm = ultimo.querySelector('.nm');
+        nm.focus();
+        var r = document.createRange(); r.selectNodeContents(nm);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      }
+    });
+  });
+}
+
+obsEl.addEventListener('input', function(){ obs = obsEl.textContent; mark(); });
+
+document.getElementById('undo').addEventListener('click', function(){
+  if (!ultimaRemocao) return;
+  data[ultimaRemocao.si].i.splice(ultimaRemocao.ii, 0, ultimaRemocao.item);
+  ultimaRemocao = null;
+  document.getElementById('toast').classList.remove('up');
+  render(); mark();
+});
+
+document.getElementById('reset').addEventListener('click', function(){
+  if (!confirm('Voltar para a lista original? As edições deste retiro se perdem.')) return;
+  data = JSON.parse(JSON.stringify(MODELO));
+  obs = MODELO_OBS;
+  obsEl.textContent = obs;
+  render(); mark();
+});
+
+document.getElementById('save').addEventListener('click', function(){
+  toast(save() ? 'Lista salva neste aparelho' : 'Não deu para salvar neste navegador');
+});
+
+/* Imprimir e salvar em PDF sao a mesma coisa: a caixa de impressao do proprio
+   navegador tem "Salvar como PDF" como destino, no celular e no computador.
+   Por isso nao entra biblioteca de PDF aqui. */
+document.getElementById('print').addEventListener('click', function(){
+  var d = new Date();
+  document.getElementById('impresso').textContent =
+    'Impresso em ' + d.toLocaleDateString('pt-BR') + ' às ' + hora()
+    + '  |  ' + document.getElementById('done').textContent + ' de '
+    + document.getElementById('total').textContent + ' itens já no carrinho';
+  window.print();
+});
+
+window.addEventListener('beforeunload', function(e){ if (sujo){ e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- partida ----------
+   Ordem importa: mostra o local primeiro para a pagina abrir cheia na hora,
+   depois o banco corrige se tiver algo mais novo. */
+
+function iniciar(){
+  var temLocal = carregarLocal();
+
+  if (!temLocal){
+    data = JSON.parse(JSON.stringify(MODELO));
+    obs = MODELO_OBS;
+    obsEl.textContent = obs;
+    renderMeta();
+    render();
+  }
+
+  if (temSync()){
+    dbGet('indice/' + ID).then(function(m){
+      if (m){ meta = m; renderMeta(); }
+    }).catch(function(){});
+  }
+
+  paint();
+  startSync();
+}
+
+iniciar();
+</script>
+</body></html>

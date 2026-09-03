@@ -8,9 +8,6 @@ Thumbs.db
 .idea/
 *.swp
 
-# Arquivos gerados pelo botão "Enviar" da própria lista
-Lista de compras Acamps *.html
-
 # Rascunhos e backups
 *.bak
 *.tmp
