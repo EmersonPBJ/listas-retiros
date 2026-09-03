@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lista de compras</title>
-<link rel="stylesheet" href="app.css?v=2">
+<link rel="stylesheet" href="app.css?v=3">
 </head><body>
 
 <div class="wrap">
@@ -54,8 +54,8 @@
   <span id="status">tudo salvo</span>
 </div>
 
-<script src="config.js?v=2"></script>
-<script src="modelo.js?v=2"></script>
+<script src="config.js?v=3"></script>
+<script src="modelo.js?v=3"></script>
 <script>
 document.documentElement.className = '';
 
@@ -76,6 +76,7 @@ var localV = 0, polling = null;
 var listEl = document.getElementById('list');
 var obsEl = document.getElementById('obs');
 var ultimaRemocao = null, sujo = false, salvoAs = null;
+var ultimoProgresso = '';
 
 /* ---------- desenho ---------- */
 
@@ -198,6 +199,9 @@ function aplicar(pkg){
   obsEl.textContent = obs;
   renderMeta();
   render();
+  /* Aqui, e nao no iniciar(): no iniciar a lista ainda pode ser o modelo
+     padrao de 62 itens, e publicariamos um placar que nao e desta lista. */
+  publicarProgresso();
   return true;
 }
 
@@ -211,9 +215,26 @@ function carregarLocal(){
    PUT grava o retiro inteiro. GET a cada 5s traz o que os outros marcaram.
    O modelo de conflito e "ultimo a gravar vence", com o retiro como unidade. */
 
+/* Um PATCH pequeno no indice com o placar da compra. So dispara quando o
+   placar muda de verdade: digitar no nome de um item nao mexe nele, entao
+   nao adianta gastar requisicao a cada tecla. */
+function publicarProgresso(){
+  if (!temSync()) return;
+  var todos = 0, feitos = 0;
+  data.forEach(function(sec){
+    todos += sec.i.length;
+    feitos += sec.i.filter(function(x){ return x.done; }).length;
+  });
+  var placar = feitos + '/' + todos;
+  if (placar === ultimoProgresso) return;
+  ultimoProgresso = placar;
+  dbPatch('indice/' + ID, {progresso: {feitos: feitos, todos: todos}}).catch(function(){});
+}
+
 function push(){
   if (!temSync()) return;
   localV = Date.now();
+  publicarProgresso();
   dbPut('retiros/' + ID, pacote()).then(function(){
     setLive(true, 'Lista compartilhada, todos veem as mesmas marcações');
   }).catch(function(){

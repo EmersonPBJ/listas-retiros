@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Compras dos retiros</title>
-<link rel="stylesheet" href="app.css?v=2">
+<link rel="stylesheet" href="app.css?v=3">
 </head><body>
 
 <div class="wrap">
@@ -70,8 +70,8 @@
 
 <div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
 
-<script src="config.js?v=2"></script>
-<script src="modelo.js?v=2"></script>
+<script src="config.js?v=3"></script>
+<script src="modelo.js?v=3"></script>
 <script>
 document.documentElement.className = '';
 
@@ -128,7 +128,9 @@ function render(){
     if (r.refeicoes) fatos.push(r.refeicoes + ' refeições');
     if (r.periodo)   fatos.push(r.periodo);
 
-    var p = progresso(id);
+    /* O placar do banco vem primeiro: e o que a equipe inteira enxerga.
+       O local so entra como reserva, para a tela nao ficar muda offline. */
+    var p = (r.progresso && r.progresso.todos) ? r.progresso : progresso(id);
     var direita = p && p.todos
       ? '<b>' + p.feitos + '/' + p.todos + '</b><small>no carrinho</small>'
       : '<small>abrir</small>';
@@ -185,7 +187,11 @@ document.getElementById('criar').addEventListener('click', function(){
     ]).then(function(){
       location.href = 'lista.html?r=' + encodeURIComponent(id);
     }).catch(function(){
-      toast('Retiro criado só neste aparelho, o banco não respondeu');
+      /* Sem essa marca, o proximo carregamento leria o indice do banco, nao
+         acharia este retiro e o apagaria do aparelho junto com a lista. */
+      indice[id].pendenteSync = true;
+      gravarIndiceLocal();
+      toast('Retiro criado só neste aparelho, sobe sozinho quando voltar o sinal');
       render();
     });
   } else {
@@ -238,6 +244,30 @@ document.getElementById('undo').addEventListener('click', function(){
   }
 });
 
+/* Tenta subir um retiro que nasceu offline. Se der certo, tira a marca de
+   pendente para nao ficar tentando para sempre. */
+function subirPendente(id){
+  var t = lsLer(chaveLista(id));
+  if (!t) return;
+  var pacote;
+  try { pacote = JSON.parse(t); } catch (e) { return; }
+
+  var limpa = {};
+  Object.keys(indice[id]).forEach(function(k){
+    if (k !== 'pendenteSync') limpa[k] = indice[id][k];
+  });
+
+  var m = {}; m[id] = limpa;
+  Promise.all([dbPatch('indice', m), dbPut('retiros/' + id, pacote)])
+    .then(function(){
+      indice[id] = limpa;
+      gravarIndiceLocal();
+      render();
+      toast('"' + (limpa.nome || id) + '" subiu para o banco, a equipe já vê');
+    })
+    .catch(function(){});
+}
+
 /* ---------- partida ---------- */
 
 function iniciar(){
@@ -251,10 +281,21 @@ function iniciar(){
   }
 
   dbGet('indice').then(function(remoto){
-    indice = remoto || {};
+    var novo = remoto || {};
+    /* O banco manda, com uma excecao: retiro que ainda nao conseguiu subir
+       fica de pe e tenta de novo agora. */
+    var pendentes = [];
+    Object.keys(indice).forEach(function(id){
+      if (!novo[id] && indice[id].pendenteSync){
+        novo[id] = indice[id];
+        pendentes.push(id);
+      }
+    });
+    indice = novo;
     gravarIndiceLocal();
     render();
     setLive(true, 'Retiros compartilhados, todos veem os mesmos');
+    pendentes.forEach(subirPendente);
   }).catch(function(){
     setLive(false, 'Sem conexão, mostrando o que está guardado neste aparelho');
   });
