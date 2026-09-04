@@ -126,3 +126,27 @@ function normalizarSecoes(data){
     return sec;
   });
 }
+
+/* -------- o Worker da IA --------
+   Endereco do Worker que sugere quantidades. A chave da API nao mora aqui e
+   nunca vai morar: este arquivo e publico. Quem guarda a chave e o Worker,
+   como secret da Cloudflare. Vazio aqui, o site funciona igual, so sem os
+   botoes de sugestao. */
+
+var IA_URL = "https://anjo-cozinha-ia.raiseupfoto.workers.dev";
+
+function temIA(){ return !!IA_URL; }
+
+function pedirIA(corpo){
+  if (!temIA()) return Promise.reject(new Error("IA nao configurada"));
+  return fetch(IA_URL, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(corpo)
+  }).then(function(r){
+    return r.json().then(function(j){
+      if (!r.ok) throw new Error(j.erro || ("HTTP " + r.status));
+      return j;
+    });
+  });
+}

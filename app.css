@@ -443,3 +443,24 @@ ul.insumos b{
   .ref-pratos{color:#000;font-size:10pt;}
   .ref-bloco .head{border-bottom:1px solid #999;}
 }
+
+/* ---------- botoes e resultados da IA ---------- */
+.botao-ia{
+  display:block;width:100%;margin-top:12px;
+  font-family:inherit;font-size:14px;font-weight:600;padding:11px 16px;
+  border-radius:9px;cursor:pointer;
+  border:1px dashed var(--green);background:#f2f8f5;color:var(--green);
+}
+.botao-ia:disabled{opacity:.55;cursor:default;}
+.ajuda-erro{color:var(--alert);}
+
+.alerta{
+  padding:11px 13px;margin-top:9px;border-radius:8px;
+  font-size:13.5px;line-height:1.5;
+  background:#f8faf9;border-left:3px solid var(--muted);
+}
+.alerta.alta{background:var(--alert-bg);border-left-color:var(--alert);}
+.alerta.media{background:#fdf9f2;border-left-color:#a16207;}
+.alerta.baixa{background:#f8faf9;border-left-color:#c3ccc7;}
+
+@media print{ .botao-ia,.alerta,#bloco-revisao{display:none !important;} }

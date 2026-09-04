@@ -29,7 +29,9 @@ Não tem build, não tem dependência, não tem npm. São arquivos estáticos.
 | `modelo.js` | lista padrão de 62 itens, para quem quer começar pronto |
 | `receitas.js` | catálogo de pratos e o gerador de lista a partir do cardápio |
 | `app.css` | estilo das três páginas, incluindo a folha de impressão |
+| `refeicoes.html` | insumos separados por refeição, para a cozinha no dia |
 | `database.rules.json` | regras de segurança do banco, versionadas |
+| `worker/` | Cloudflare Worker que guarda a chave da IA |
 
 A `SYNC_URL` aparece em um lugar só, no topo do `config.js`. Trocou ali, trocou
 em todo lado.
@@ -220,6 +222,66 @@ momento: quantidade editada na mão se perde, e a página avisa antes quando
 detecta que houve edição manual; já o que a equipe marcou como comprado é
 transportado por nome para a lista nova, porque zerar o carrinho de quem está
 no meio do mercado seria cruel.
+
+## A IA que sugere quantidades
+
+O site é estático no GitHub Pages, e isso decide a arquitetura inteira desta
+parte: **qualquer coisa no `config.js` é pública**. Uma chave da API da
+Anthropic ali seria copiada e gasta por qualquer pessoa que abrisse o código.
+
+Por isso existe o `worker/`, um Cloudflare Worker que fica no meio. A chave
+mora nele como secret cifrado, o site chama o Worker, o Worker chama a
+Anthropic. O navegador nunca vê a chave.
+
+```
+navegador  ->  anjo-cozinha-ia.raiseupfoto.workers.dev  ->  api.anthropic.com
+(sem chave)         (chave em secret)
+```
+
+### Duas ações
+
+- `sugerir-prato`: recebe o nome de um prato e um número de pessoas, devolve os
+  ingredientes com quantidade e seção de mercado. É o que preenche o cadastro
+  de prato personalizado quando alguém digita algo que não está no catálogo.
+- `revisar-cardapio`: recebe o cardápio inteiro e a lista gerada, devolve
+  alertas ordenados por gravidade e itens que faltam. É a rede para quem nunca
+  organizou uma cozinha de retiro.
+
+Ambas usam structured output (`output_config.format` com esquema Zod), então a
+resposta chega como objeto validado, não como texto para o site tentar
+interpretar.
+
+### Deploy e a chave
+
+```
+cd worker
+npm install
+npx wrangler deploy
+npx wrangler secret put ANTHROPIC_API_KEY
+```
+
+O `secret put` pergunta a chave no terminal e a manda cifrada para a
+Cloudflare. Ela nunca entra no repositório, nem no `wrangler.toml`, nem em
+lugar nenhum que o git veja. Para desenvolvimento local, `worker/.dev.vars`
+guarda uma chave de teste e está no `.gitignore`.
+
+### Defesas
+
+- **Origem**: o Worker só responde a requisições vindas dos endereços em
+  `ORIGENS_PERMITIDAS`, no `wrangler.toml`. Outro site recebe 403.
+- **Degradação**: com `IA_URL` vazia no `config.js`, os botões de IA nem
+  aparecem e o site funciona igual, no cálculo determinístico. Com o Worker no
+  ar mas sem chave, o erro aparece na tela e o cadastro manual continua
+  disponível. Nenhum caminho de falha trava a ferramenta.
+- **Erros tratados por status, não por `instanceof`**: depois do empacotamento
+  do wrangler a identidade das classes de erro do SDK não sobrevive, e todo
+  erro caía no caso genérico. Isso já mordeu uma vez.
+
+### Custo
+
+Cada sugestão de prato ou revisão é uma chamada ao `claude-opus-5`. Montar um
+retiro inteiro custa centavos. O teto se controla no painel da Anthropic, em
+limites de gasto, não no código.
 
 ## Cache dos arquivos
 

@@ -1,0 +1,17 @@
+{
+  "name": "anjo-cozinha-ia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Worker que sugere quantidades de ingredientes para o Anjo da cozinha",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.129.0"
+  }
+}

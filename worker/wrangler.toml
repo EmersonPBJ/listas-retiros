@@ -1,0 +1,13 @@
+name = "anjo-cozinha-ia"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Quem pode chamar este Worker. Sem isso, qualquer site poderia usar a sua
+# chave da Anthropic. O navegador so envia a requisicao se a origem bater.
+ORIGENS_PERMITIDAS = "https://emersonpbj.github.io,http://localhost:4199,http://localhost:4173"
+
+# A chave da API NAO fica aqui. Ela e um secret, guardado cifrado na
+# Cloudflare, e se configura com:
+#     wrangler secret put ANTHROPIC_API_KEY

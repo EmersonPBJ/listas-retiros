@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Montar o cardápio</title>
-<link rel="stylesheet" href="app.css?v=8">
+<link rel="stylesheet" href="app.css?v=10">
 </head><body>
 
 <div class="wrap">
@@ -70,6 +70,16 @@
     <div id="previa"></div>
   </div>
 
+  <div class="etapa js-only" id="bloco-revisao" style="display:none">
+    <h3>5. Uma última conferida</h3>
+    <p class="ajuda">
+      A IA lê o cardápio inteiro e a lista, e diz o que costuma faltar na hora.
+      Vale principalmente para quem nunca organizou uma cozinha de retiro.
+    </p>
+    <button class="botao-ia" id="revisar">Revisar o cardápio com IA</button>
+    <div id="revisao"></div>
+  </div>
+
   <div class="aviso">
     <b>As quantidades são sugestão, não evangelho.</b> Elas vêm da lista real do
     6º Acamps 7 Jovens, que era para 45 pessoas em 3 dias, convertida em taxa
@@ -109,6 +119,11 @@
     <label for="pc-base">As quantidades abaixo dão para quantas pessoas?</label>
     <input id="pc-base" inputmode="numeric" value="45" autocomplete="off">
 
+    <button class="botao-ia js-only" id="pc-ia" style="display:none">
+      Sugerir os ingredientes com IA
+    </button>
+    <p class="ajuda" id="pc-ia-status" style="display:none"></p>
+
     <label>Ingredientes</label>
     <div id="pc-ing"></div>
     <button class="add" id="pc-add">+ ingrediente</button>
@@ -127,9 +142,9 @@
   <span id="status">monte o período acima</span>
 </div>
 
-<script src="config.js?v=8"></script>
-<script src="modelo.js?v=8"></script>
-<script src="receitas.js?v=8"></script>
+<script src="config.js?v=10"></script>
+<script src="modelo.js?v=10"></script>
+<script src="receitas.js?v=10"></script>
 <script>
 document.documentElement.className = '';
 
@@ -381,6 +396,122 @@ document.getElementById('pc-salvar').addEventListener('click', function(){
   toast('"' + prato.nome + '" entrou no cardápio');
 });
 
+/* ---------- a IA ----------
+   Quem fala com a Anthropic é o Worker, não esta página: a chave da API não
+   pode viver num arquivo público. Se IA_URL estiver vazia, os botões nem
+   aparecem e o resto do site funciona igual. */
+
+function statusIA(texto, erro){
+  var p = document.getElementById('pc-ia-status');
+  p.style.display = texto ? '' : 'none';
+  p.textContent = texto || '';
+  p.className = 'ajuda' + (erro ? ' ajuda-erro' : '');
+}
+
+document.getElementById('pc-ia').addEventListener('click', function(){
+  var nome = document.getElementById('pc-nome').value.trim();
+  if (!nome){
+    alert('Escreva o nome do prato primeiro, para a IA saber do que se trata.');
+    document.getElementById('pc-nome').focus();
+    return;
+  }
+
+  var botao = this;
+  var base = Math.max(1, parseInt(document.getElementById('pc-base').value, 10) || pessoasDoForm());
+  var ref = editandoRefeicao !== null && refeicoes[editandoRefeicao]
+    ? refeicoes[editandoRefeicao].nome : '';
+
+  botao.disabled = true;
+  statusIA('Pensando nas quantidades para ' + base + ' pessoas...');
+
+  pedirIA({acao: 'sugerir-prato', prato: nome, pessoas: base, refeicao: ref})
+    .then(function(r){
+      var p = r.prato;
+      if (!p || !p.ingredientes || !p.ingredientes.length){
+        statusIA('A IA não conseguiu montar este prato. Preencha à mão.', true);
+        return;
+      }
+      document.getElementById('pc-nome').value = p.nome || nome;
+      if (p.grupo) document.getElementById('pc-grupo').value = p.grupo;
+      document.getElementById('pc-ing').innerHTML = '';
+      p.ingredientes.forEach(function(i){
+        addLinha({n: i.nome, sec: i.secao, q: numeroBR(i.quantidade), un: i.unidade});
+      });
+      statusIA(p.observacao
+        ? ('Confira antes de salvar. ' + p.observacao)
+        : 'Confira antes de salvar, a IA erra.');
+    })
+    .catch(function(e){
+      statusIA('Não deu para consultar a IA: ' + e.message + '. Preencha à mão.', true);
+    })
+    .then(function(){ botao.disabled = false; });
+});
+
+document.getElementById('revisar').addEventListener('click', function(){
+  if (!temPrato()){ alert('Monte o cardápio antes de pedir a revisão.'); return; }
+
+  var botao = this;
+  var caixa = document.getElementById('revisao');
+  var pessoas = pessoasDoForm();
+  var lista = gerarLista(pessoas, refeicoes, extrasMarcados, pratosCustom);
+  var porId = {};
+  PRATOS.concat(pratosCustom).forEach(function(p){ porId[p.id] = p.nome; });
+
+  var itens = [];
+  lista.forEach(function(sec){ sec.i.forEach(function(it){ itens.push(it.q + ' ' + it.n); }); });
+
+  botao.disabled = true;
+  caixa.innerHTML = '<p class="ajuda">Lendo o cardápio inteiro...</p>';
+
+  pedirIA({
+    acao: 'revisar-cardapio',
+    pessoas: pessoas,
+    refeicoes: refeicoes.map(function(r){
+      return {nome: r.nome, pratos: (r.pratos || []).map(function(id){ return porId[id] || id; })};
+    }),
+    itens: itens
+  }).then(function(r){
+    var rev = r.revisao || {};
+    var alertas = rev.alertas || [], faltando = rev.faltando || [];
+    if (!alertas.length && !faltando.length){
+      caixa.innerHTML = '<p class="ajuda">A IA não achou nada faltando. Bom sinal.</p>';
+      return;
+    }
+    caixa.innerHTML =
+      alertas.map(function(a){
+        return '<div class="alerta ' + esc(a.gravidade) + '">' + esc(a.texto) + '</div>';
+      }).join('')
+      + (faltando.length
+        ? '<div class="grupo"><span class="grupo-t">Itens que a IA acrescentaria</span>'
+          + '<div class="chips">'
+          + faltando.map(function(f, i){
+              return '<button type="button" class="chip" data-falta="' + i + '">+ '
+                + esc(numeroBR(f.quantidade)) + ' ' + esc(f.unidade) + ' ' + esc(f.nome)
+                + '</button>';
+            }).join('')
+          + '</div></div>'
+          + '<p class="ajuda">Toque para virar um prato personalizado e entrar na conta.</p>'
+        : '');
+
+    Array.prototype.forEach.call(caixa.querySelectorAll('[data-falta]'), function(b){
+      b.addEventListener('click', function(){
+        var f = faltando[+b.getAttribute('data-falta')];
+        var prato = montarPratoCustom(f.nome, pessoas,
+          [{n: f.nome, sec: f.secao, q: String(f.quantidade), un: f.unidade}],
+          'Acompanhamento');
+        if (!prato) return;
+        pratosCustom.push(prato);
+        if (refeicoes[0]) refeicoes[0].pratos.push(prato.id);
+        b.disabled = true;
+        renderRefeicoes(); atualizarPrevia();
+        toast('"' + f.nome + '" entrou na lista');
+      });
+    });
+  }).catch(function(e){
+    caixa.innerHTML = '<p class="ajuda ajuda-erro">Não deu para revisar: ' + esc(e.message) + '</p>';
+  }).then(function(){ botao.disabled = false; });
+});
+
 /* ---------- prévia ---------- */
 
 function pessoasDoForm(){
@@ -569,6 +700,13 @@ function preencherDe(pkg){
 }
 
 function iniciar(){
+  /* Sem Worker configurado, os botoes de IA nem aparecem: melhor nao existir
+     do que existir e falhar quando a pessoa tocar. */
+  if (temIA()){
+    document.getElementById("pc-ia").style.display = "";
+    document.getElementById("bloco-revisao").style.display = "";
+  }
+
   montarSelects();
   renderExtras();
   renderRefeicoes();
