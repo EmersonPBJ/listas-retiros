@@ -2,27 +2,37 @@
 <html lang="pt-BR" class="no-js"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Compras dos retiros</title>
-<link rel="stylesheet" href="app.css?v=3">
+<title>Anjo da cozinha de Retiros Igreja</title>
+<link rel="stylesheet" href="app.css?v=6">
 </head><body>
 
 <div class="wrap">
   <div class="top">
-    <h1>Compras<br>dos retiros</h1>
-    <p class="facts">
-      <span>cada retiro com a sua lista</span>
+    <h1>Anjo da cozinha de Retiros Igreja
+      <span class="h1-cont">- Cardápios, refeições e lista de compras</span>
+    </h1>
+    <p class="intro">
+      Ferramenta pra ajudar desde o cálculo de quantidades frente a cardápios e
+      números de pessoas, como na lista de compras! É um anjinho da guarda, pra
+      não esquecer nada e dar um norte
     </p>
-    <p class="hint">
+    <p class="hint" id="linha-conexao" style="display:none">
       <span class="live" id="live"></span>
-      <span id="livetxt">Carregando os retiros...</span>
+      <span id="livetxt"></span>
     </p>
+  </div>
+
+  <div class="head historico">
+    <span class="dot" style="background:var(--green)"></span>
+    <h2>Histórico de compras de retiros anteriores</h2>
   </div>
 
   <ul class="retiros" id="retiros"></ul>
 
   <div class="vazio" id="vazio" style="display:none">
-    Nenhum retiro criado ainda.<br>
-    Crie o primeiro aqui embaixo: ele já nasce com a lista completa de 62 itens.
+    Nenhum retiro por aqui ainda.<br>
+    Crie o primeiro aqui embaixo, e ele passa a servir de consulta para os
+    próximos.
   </div>
 
   <div class="novo js-only">
@@ -41,12 +51,13 @@
     </div>
     <label for="periodo">Período</label>
     <input id="periodo" placeholder="sábado ao meio-dia até segunda no almoço" autocomplete="off">
-    <button id="criar">Criar retiro com a lista padrão</button>
+    <button id="criar">Criar lista de compras do zero</button>
     <a class="botao-alt" href="cardapio.html">Ou monte pelo cardápio</a>
     <p class="ajuda" style="margin:10px 0 0">
-      Montando pelo cardápio, você diz o que vai servir em cada refeição e a
-      lista sai com as quantidades já calculadas para o número de pessoas.
-      Bom para quem nunca organizou a cozinha de um retiro.
+      Do zero, a lista já vem dividida nas seções do mercado, e os itens são
+      você que põe. Montando pelo cardápio, você diz o que vai servir em cada
+      refeição e a lista sai com as quantidades calculadas para o número de
+      pessoas.
     </p>
   </div>
 
@@ -70,13 +81,23 @@
 
 <div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
 
-<script src="config.js?v=3"></script>
-<script src="modelo.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="modelo.js?v=6"></script>
+<script src="receitas.js?v=6"></script>
 <script>
 document.documentElement.className = '';
 
 var indice = {};
 var ultimaExclusao = null;
+
+/* Na tela inicial o indicador de conexao so aparece quando ha problema.
+   Avisar que esta tudo bem e ruido; avisar que caiu e informacao. */
+var setLiveBase = setLive;
+setLive = function(ligado, texto){
+  setLiveBase(ligado, texto);
+  var linha = document.getElementById('linha-conexao');
+  if (linha) linha.style.display = ligado ? 'none' : '';
+};
 
 function esc(s){
   return String(s == null ? '' : s)
@@ -98,14 +119,32 @@ function gravarIndiceLocal(){ lsGravar(CHAVE_INDICE, JSON.stringify(indice)); }
 
 /* ---------- desenho ---------- */
 
+/* O selo colorido a esquerda de cada retiro. A cor sai do proprio nome, entao
+   e sempre a mesma para o mesmo retiro, em qualquer aparelho, sem precisar
+   guardar nada. Sao as cores das secoes do mercado, para nao inventar paleta. */
+var CORES_SELO = ['#c2410c','#0369a1','#15803d','#7c3aed','#a16207',
+                  '#be123c','#0f766e','#db2777','#475569'];
+
+function corDoNome(nome){
+  var soma = 0;
+  for (var i = 0; i < nome.length; i++) soma = (soma + nome.charCodeAt(i)) % 9973;
+  return CORES_SELO[soma % CORES_SELO.length];
+}
+
+function inicial(nome){
+  var m = String(nome).match(/[A-Za-zÀ-ÿ0-9]/);
+  return m ? m[0].toUpperCase() : '?';
+}
+
 function progresso(id){
   var t = lsLer(chaveLista(id));
   if (!t) return null;
   try {
     var pkg = JSON.parse(t);
-    if (!Array.isArray(pkg.data)) return null;
+    var secoes = normalizarSecoes(pkg.data);
+    if (!secoes.length) return null;
     var todos = 0, feitos = 0;
-    pkg.data.forEach(function(sec){
+    secoes.forEach(function(sec){
       todos += sec.i.length;
       feitos += sec.i.filter(function(x){ return x.done; }).length;
     });
@@ -137,8 +176,12 @@ function render(){
 
     return '<li>'
       + '<a href="lista.html?r=' + encodeURIComponent(id) + '">'
-      +   '<span class="rn">' + esc(r.nome || id) + '</span>'
-      +   (fatos.length ? '<span class="rf">' + esc(fatos.join('  ·  ')) + '</span>' : '')
+      +   '<span class="selo" style="background:' + corDoNome(r.nome || id) + '"'
+      +     ' aria-hidden="true">' + esc(inicial(r.nome || id)) + '</span>'
+      +   '<span class="rt">'
+      +     '<span class="rn">' + esc(r.nome || id) + '</span>'
+      +     (fatos.length ? '<span class="rf">' + esc(fatos.join('  ·  ')) + '</span>' : '')
+      +   '</span>'
       + '</a>'
       + '<span class="rp">' + direita + '</span>'
       + '<button class="kill js-only" data-id="' + esc(id) + '" aria-label="apagar retiro">×</button>'
@@ -170,9 +213,11 @@ document.getElementById('criar').addEventListener('click', function(){
   };
   var pacote = {
     v: Date.now(),
-    data: JSON.parse(JSON.stringify(MODELO)),
-    obs: MODELO_OBS,
-    meta: meta
+    data: secoesVazias(),
+    obs: '',
+    meta: meta,
+    /* marca como nasceu, para o botao de restaurar saber ao que voltar */
+    origem: 'zero'
   };
 
   indice[id] = meta;
@@ -294,10 +339,10 @@ function iniciar(){
     indice = novo;
     gravarIndiceLocal();
     render();
-    setLive(true, 'Retiros compartilhados, todos veem os mesmos');
+    setLive(true, '');
     pendentes.forEach(subirPendente);
   }).catch(function(){
-    setLive(false, 'Sem conexão, mostrando o que está guardado neste aparelho');
+    setLive(false, 'Sem conexão. Mostrando o que está guardado neste aparelho.');
   });
 }
 

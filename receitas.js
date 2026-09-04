@@ -254,7 +254,10 @@ function porPessoa(v, un){
    Devolve o mesmo formato que a lista.html já sabe desenhar, entao nada
    downstream precisa mudar. */
 
-function gerarLista(pessoas, dias, refeicoes, extras){
+/* pratosCustom sao pratos que a propria pessoa cadastrou naquele retiro,
+   no mesmo formato dos do catalogo. Entram no mesmo indice por id, entao
+   dai para frente o gerador nao sabe nem se importa quem e quem. */
+function gerarLista(pessoas, dias, refeicoes, extras, pratosCustom){
   pessoas = Math.max(1, parseInt(pessoas, 10) || 1);
   dias    = Math.max(1, parseInt(dias, 10) || 1);
   refeicoes = refeicoes || [];
@@ -279,6 +282,7 @@ function gerarLista(pessoas, dias, refeicoes, extras){
 
   var porId = {};
   PRATOS.forEach(function(p){ porId[p.id] = p; });
+  (pratosCustom || []).forEach(function(p){ porId[p.id] = p; });
 
   refeicoes.forEach(function(ref){
     (ref.pratos || []).forEach(function(id){
@@ -343,4 +347,37 @@ function gerarLista(pessoas, dias, refeicoes, extras){
 
 function contarItens(secoes){
   return secoes.reduce(function(a, s){ return a + s.i.length; }, 0);
+}
+
+/* Esqueleto de lista: so as secoes do mercado, sem item nenhum.
+   E o ponto de partida de quem prefere montar a lista na mao. */
+function secoesVazias(){
+  return SECOES.map(function(s){ return {t: s.t, h: s.h, i: []}; });
+}
+
+/* Monta um prato a partir do jeito que cozinheiro pensa: "5 kg de arroz
+   para 45 pessoas", e nao "0,111 kg por pessoa". A divisao pela base e
+   exatamente o que fizemos a mao para extrair o catalogo da lista real.
+   Grama e mililitro viram quilo e litro, senao o arredondamento trataria
+   eles como item contavel. */
+function montarPratoCustom(nome, base, ingredientes){
+  base = Math.max(1, parseInt(base, 10) || 1);
+  var ing = [];
+  ingredientes.forEach(function(x){
+    var q = parseFloat(String(x.q).replace(",", "."));
+    if (!x.n || !isFinite(q) || q <= 0) return;
+    var un = x.un;
+    if (un === "g"){ q = q / 1000; un = "kg"; }
+    if (un === "ml"){ q = q / 1000; un = "L"; }
+    ing.push({n: String(x.n).trim(), sec: x.sec, pp: q / base, un: un});
+  });
+  if (!ing.length) return null;
+  return {
+    id: "custom-" + Math.random().toString(36).slice(2, 8),
+    nome: String(nome).trim(),
+    tipo: "Personalizado",
+    custom: true,
+    base: base,
+    ing: ing
+  };
 }

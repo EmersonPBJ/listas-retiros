@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lista de compras</title>
-<link rel="stylesheet" href="app.css?v=3">
+<link rel="stylesheet" href="app.css?v=6">
 </head><body>
 
 <div class="wrap">
@@ -54,8 +54,9 @@
   <span id="status">tudo salvo</span>
 </div>
 
-<script src="config.js?v=3"></script>
-<script src="modelo.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="modelo.js?v=6"></script>
+<script src="receitas.js?v=6"></script>
 <script>
 document.documentElement.className = '';
 
@@ -72,6 +73,7 @@ var meta = {nome:'Lista de compras', pessoas:'', refeicoes:'', periodo:''};
 var data = [];
 var obs = '';
 var cardapio = null;
+var origem = null;
 var localV = 0, polling = null;
 var listEl = document.getElementById('list');
 var obsEl = document.getElementById('obs');
@@ -170,6 +172,13 @@ function mostrarLinkCardapio(){
   } else {
     a.style.display = 'none';
   }
+
+  /* O rotulo do botao acompanha o que ele realmente faz */
+  var r = document.getElementById('reset');
+  if (r){
+    r.textContent = origem === 'zero' ? 'Esvaziar a lista'
+      : (cardapio ? 'Recalcular pelo cardápio' : 'Restaurar lista original');
+  }
 }
 
 /* ---------- persistencia ---------- */
@@ -177,6 +186,7 @@ function mostrarLinkCardapio(){
 function pacote(){
   var p = {v: localV, data: data, obs: obs, meta: meta};
   if (cardapio) p.cardapio = cardapio;
+  if (origem) p.origem = origem;
   return p;
 }
 
@@ -190,11 +200,14 @@ function save(){
 function mark(){ sujo = true; paint(); save(); push(); }
 
 function aplicar(pkg){
-  if (!pkg || !Array.isArray(pkg.data) || !pkg.data.length) return false;
-  data = pkg.data;
+  if (!pkg) return false;
+  var secoes = normalizarSecoes(pkg.data);
+  if (!secoes.length) return false;
+  data = secoes;
   obs = typeof pkg.obs === 'string' ? pkg.obs : obs;
   if (pkg.meta) meta = pkg.meta;
   if (pkg.cardapio) cardapio = pkg.cardapio;
+  if (pkg.origem) origem = pkg.origem;
   mostrarLinkCardapio();
   obsEl.textContent = obs;
   renderMeta();
@@ -254,7 +267,7 @@ function digitando(){
 function pull(){
   if (!temSync()) return;
   dbGet('retiros/' + ID).then(function(j){
-    if (j && j.v && j.v > localV && !digitando() && Array.isArray(j.data)){
+    if (j && j.v && j.v > localV && !digitando() && j.data){
       localV = j.v;
       aplicar(j);
       lsGravar(CHAVE, JSON.stringify(pacote()));
@@ -328,9 +341,23 @@ document.getElementById('undo').addEventListener('click', function(){
 });
 
 document.getElementById('reset').addEventListener('click', function(){
-  if (!confirm('Voltar para a lista original? As edições deste retiro se perdem.')) return;
-  data = JSON.parse(JSON.stringify(MODELO));
-  obs = MODELO_OBS;
+  /* 'Original' depende de como a lista nasceu. Uma lista feita do zero volta
+     para as secoes vazias; uma nascida de cardapio volta para o cardapio; as
+     antigas, criadas antes disso existir, voltam para o modelo. */
+  var alvo, aviso;
+  if (origem === 'zero'){
+    alvo = secoesVazias();
+    aviso = 'Esvaziar a lista e deixar so as secoes do mercado? Os itens que voces puseram se perdem.';
+  } else if (cardapio){
+    alvo = gerarLista(parseInt(meta.pessoas, 10) || 1, cardapio.dias || 1, cardapio.refeicoes || [], cardapio.extras || [], cardapio.pratosCustom || []);
+    aviso = 'Recalcular a lista a partir do cardapio? As edicoes feitas na mao se perdem.';
+  } else {
+    alvo = JSON.parse(JSON.stringify(MODELO));
+    aviso = 'Voltar para a lista original? As edicoes deste retiro se perdem.';
+  }
+  if (!confirm(aviso)) return;
+  data = alvo;
+  if (origem !== 'zero' && !cardapio) obs = MODELO_OBS;
   obsEl.textContent = obs;
   render(); mark();
 });

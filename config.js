@@ -100,3 +100,29 @@ function toast(msg, comDesfazer){
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function(){ el.classList.remove('up'); }, 6000);
 }
+
+/* -------- normalizacao vinda do banco --------
+   O Realtime Database nao guarda array nem objeto vazio: ele apaga a chave.
+   Uma lista criada do zero, ou uma em que apagaram todos os itens de uma
+   secao, volta do banco sem o campo `i`, e a pagina quebrava ao ler `.length`.
+   Ele tambem devolve array como objeto quando os indices ficam esburacados.
+   Toda entrada de dados passa por aqui. */
+
+function comoArray(v){
+  if (Array.isArray(v)) return v.filter(function(x){ return x != null; });
+  if (v && typeof v === 'object'){
+    return Object.keys(v)
+      .sort(function(a, b){ return (+a) - (+b); })
+      .map(function(k){ return v[k]; })
+      .filter(function(x){ return x != null; });
+  }
+  return [];
+}
+
+function normalizarSecoes(data){
+  return comoArray(data).map(function(sec){
+    sec = sec || {};
+    sec.i = comoArray(sec.i);
+    return sec;
+  });
+}

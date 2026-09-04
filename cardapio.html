@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Montar o cardápio</title>
-<link rel="stylesheet" href="app.css?v=3">
+<link rel="stylesheet" href="app.css?v=6">
 </head><body>
 
 <div class="wrap">
@@ -79,6 +79,32 @@
   </div>
 </div>
 
+<div id="editor-fundo" class="editor-fundo" style="display:none">
+  <div class="editor">
+    <h3 id="pc-titulo">Prato personalizado</h3>
+    <p class="ajuda">
+      Ponha a quantidade que você usaria para um número de pessoas que conheça.
+      A ferramenta reescala sozinha para o tamanho deste retiro, do mesmo jeito
+      que faz com os pratos prontos.
+    </p>
+
+    <label for="pc-nome">Nome do prato</label>
+    <input id="pc-nome" placeholder="Tilápia com arroz" autocomplete="off">
+
+    <label for="pc-base">As quantidades abaixo dão para quantas pessoas?</label>
+    <input id="pc-base" inputmode="numeric" value="45" autocomplete="off">
+
+    <label>Ingredientes</label>
+    <div id="pc-ing"></div>
+    <button class="add" id="pc-add">+ ingrediente</button>
+
+    <div class="editor-acoes">
+      <button id="pc-salvar">Salvar prato</button>
+      <button id="pc-cancelar" class="secundario">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
 
 <div class="savebar js-only">
@@ -86,9 +112,9 @@
   <span id="status">nenhuma refeição montada ainda</span>
 </div>
 
-<script src="config.js?v=3"></script>
-<script src="modelo.js?v=3"></script>
-<script src="receitas.js?v=3"></script>
+<script src="config.js?v=6"></script>
+<script src="modelo.js?v=6"></script>
+<script src="receitas.js?v=6"></script>
 <script>
 document.documentElement.className = '';
 
@@ -101,6 +127,10 @@ var ID = (function(){
 
 var refeicoes = [];
 var extrasMarcados = [];
+var pratosCustom = [];   /* pratos que a propria pessoa cadastrou neste retiro */
+var editandoRefeicao = null;
+
+var UNIDADES = ['kg','g','L','ml','un','dz','latas','cx','pct','potes','maços','pés','rolos'];
 
 function esc(s){
   return String(s == null ? '' : s)
@@ -114,11 +144,11 @@ var TIPOS = ['Prato principal', 'Acompanhamento', 'Lanche', 'Café da manhã', '
 
 function chipsDePratos(indice){
   var out = '';
-  TIPOS.forEach(function(tipo){
-    var doTipo = PRATOS.filter(function(p){ return p.tipo === tipo; });
-    if (!doTipo.length) return;
-    out += '<div class="grupo"><span class="grupo-t">' + esc(tipo) + '</span><div class="chips">';
-    doTipo.forEach(function(p){
+
+  function grupo(titulo, pratos, extraHTML){
+    if (!pratos.length && !extraHTML) return;
+    out += '<div class="grupo"><span class="grupo-t">' + esc(titulo) + '</span><div class="chips">';
+    pratos.forEach(function(p){
       var ativo = refeicoes[indice].pratos.indexOf(p.id) >= 0;
       out += '<button type="button" class="chip' + (ativo ? ' on' : '') + '"'
         + ' data-ref="' + indice + '" data-prato="' + esc(p.id) + '">'
@@ -126,8 +156,20 @@ function chipsDePratos(indice){
         + (p.estimado ? '<i title="quantidade estimada, não veio de retiro real">~</i>' : '')
         + '</button>';
     });
-    out += '</div></div>';
+    out += (extraHTML || '') + '</div></div>';
+  }
+
+  TIPOS.forEach(function(tipo){
+    grupo(tipo, PRATOS.filter(function(p){ return p.tipo === tipo; }), '');
   });
+
+  /* Os pratos que a pessoa cadastrou ficam disponiveis em todas as refeicoes
+     do retiro, nao so naquela onde foram criados: cardapio de retiro repete
+     prato entre refeicoes o tempo todo. */
+  grupo('Do seu cardápio', pratosCustom,
+    '<button type="button" class="chip novo-prato" data-criar="' + indice + '">'
+    + '+ criar prato</button>');
+
   return out;
 }
 
@@ -144,7 +186,7 @@ function renderRefeicoes(){
       + '</div>';
   }).join('');
 
-  Array.prototype.forEach.call(box.querySelectorAll('.chip'), function(b){
+  Array.prototype.forEach.call(box.querySelectorAll('.chip[data-prato]'), function(b){
     b.addEventListener('click', function(){
       var i = +b.getAttribute('data-ref'), id = b.getAttribute('data-prato');
       var lista = refeicoes[i].pratos;
@@ -166,7 +208,97 @@ function renderRefeicoes(){
       renderRefeicoes(); atualizarPrevia();
     });
   });
+  Array.prototype.forEach.call(box.querySelectorAll('[data-criar]'), function(b){
+    b.addEventListener('click', function(){
+      abrirEditorPrato(+b.getAttribute('data-criar'));
+    });
+  });
 }
+
+/* ---------- editor de prato personalizado ---------- */
+
+function linhaIngrediente(v){
+  v = v || {};
+  return '<div class="pc-linha">'
+    + '<input class="pc-n" placeholder="Ingrediente" value="' + esc(v.n || '') + '" autocomplete="off">'
+    + '<select class="pc-sec" aria-label="seção do mercado">'
+    +   SECOES.map(function(s){
+          return '<option' + (v.sec === s.t ? ' selected' : '') + '>' + esc(s.t) + '</option>';
+        }).join('')
+    + '</select>'
+    + '<input class="pc-q" inputmode="decimal" placeholder="0" value="' + esc(v.q || '') + '" aria-label="quantidade">'
+    + '<select class="pc-un" aria-label="unidade">'
+    +   UNIDADES.map(function(u){
+          return '<option' + (v.un === u ? ' selected' : '') + '>' + esc(u) + '</option>';
+        }).join('')
+    + '</select>'
+    + '<button type="button" class="kill pc-tira" aria-label="remover ingrediente">×</button>'
+    + '</div>';
+}
+
+function addLinha(v){
+  var box = document.getElementById('pc-ing');
+  box.insertAdjacentHTML('beforeend', linhaIngrediente(v));
+  var linha = box.lastElementChild;
+  linha.querySelector('.pc-tira').addEventListener('click', function(){
+    if (box.children.length > 1) linha.remove();
+  });
+  return linha;
+}
+
+function abrirEditorPrato(indiceRefeicao){
+  editandoRefeicao = indiceRefeicao;
+  document.getElementById('pc-nome').value = '';
+  document.getElementById('pc-base').value = dadosDoForm().pessoas;
+  document.getElementById('pc-ing').innerHTML = '';
+  addLinha(); addLinha(); addLinha();
+  document.getElementById('editor-fundo').style.display = '';
+  document.getElementById('pc-nome').focus();
+}
+
+function fecharEditorPrato(){
+  document.getElementById('editor-fundo').style.display = 'none';
+  editandoRefeicao = null;
+}
+
+document.getElementById('pc-add').addEventListener('click', function(){ addLinha().querySelector('.pc-n').focus(); });
+document.getElementById('pc-cancelar').addEventListener('click', fecharEditorPrato);
+document.getElementById('editor-fundo').addEventListener('click', function(e){
+  if (e.target.id === 'editor-fundo') fecharEditorPrato();
+});
+
+document.getElementById('pc-salvar').addEventListener('click', function(){
+  var nome = document.getElementById('pc-nome').value.trim();
+  if (!nome){
+    alert('Dê um nome ao prato.');
+    document.getElementById('pc-nome').focus();
+    return;
+  }
+
+  var ingredientes = [].map.call(document.querySelectorAll('#pc-ing .pc-linha'), function(l){
+    return {
+      n:   l.querySelector('.pc-n').value.trim(),
+      sec: l.querySelector('.pc-sec').value,
+      q:   l.querySelector('.pc-q').value.trim(),
+      un:  l.querySelector('.pc-un').value
+    };
+  });
+
+  var prato = montarPratoCustom(nome, document.getElementById('pc-base').value, ingredientes);
+  if (!prato){
+    alert('Ponha ao menos um ingrediente com nome e quantidade maior que zero.');
+    return;
+  }
+
+  pratosCustom.push(prato);
+  if (editandoRefeicao !== null && refeicoes[editandoRefeicao]){
+    refeicoes[editandoRefeicao].pratos.push(prato.id);
+  }
+  fecharEditorPrato();
+  renderRefeicoes();
+  atualizarPrevia();
+  toast('"' + prato.nome + '" entrou no cardápio');
+});
 
 function renderExtras(){
   document.getElementById('extras').innerHTML = EXTRAS.map(function(e){
@@ -211,7 +343,7 @@ function atualizarPrevia(){
     return;
   }
 
-  var lista = gerarLista(f.pessoas, f.dias, refeicoes, extrasMarcados);
+  var lista = gerarLista(f.pessoas, f.dias, refeicoes, extrasMarcados, pratosCustom);
   var n = contarItens(lista);
   resumo.textContent = n + ' itens para ' + f.pessoas + ' pessoas em ' + f.dias
     + (f.dias > 1 ? ' dias' : ' dia') + ', divididos em ' + lista.length + ' seções do mercado.';
@@ -276,7 +408,8 @@ document.getElementById('gerar').addEventListener('click', function(){
         parseInt(anterior.meta && anterior.meta.pessoas, 10) || f.pessoas,
         (anterior.cardapio && anterior.cardapio.dias) || f.dias,
         (anterior.cardapio && anterior.cardapio.refeicoes) || [],
-        (anterior.cardapio && anterior.cardapio.extras) || []
+        (anterior.cardapio && anterior.cardapio.extras) || [],
+        (anterior.cardapio && anterior.cardapio.pratosCustom) || []
       );
       var mapaAntigo = {};
       antigos.forEach(function(sec){ sec.i.forEach(function(it){ mapaAntigo[it.n] = it.q; }); });
@@ -303,7 +436,7 @@ document.getElementById('gerar').addEventListener('click', function(){
     periodo: document.getElementById('periodo').value.trim(),
     criadoEm: Date.now()
   };
-  var listaNova = gerarLista(f.pessoas, f.dias, refeicoes, extrasMarcados);
+  var listaNova = gerarLista(f.pessoas, f.dias, refeicoes, extrasMarcados, pratosCustom);
   listaNova.forEach(function(sec){
     sec.i.forEach(function(it){ if (marcados[it.n]) it.done = true; });
   });
@@ -313,8 +446,9 @@ document.getElementById('gerar').addEventListener('click', function(){
     data: listaNova,
     obs: MODELO_OBS,
     meta: meta,
+    origem: 'cardapio',
     /* guardado para dar para reabrir e recalcular depois */
-    cardapio: {dias: f.dias, refeicoes: refeicoes, extras: extrasMarcados}
+    cardapio: {dias: f.dias, refeicoes: refeicoes, extras: extrasMarcados, pratosCustom: pratosCustom}
   };
 
   var indice = {};
@@ -339,42 +473,75 @@ document.getElementById('gerar').addEventListener('click', function(){
 
 /* ---------- partida ---------- */
 
+/* Preenche a tela a partir de um pacote de retiro, venha ele do localStorage
+   ou do banco. Devolve true se achou um cardápio de verdade para editar. */
+function preencherDe(pkg){
+  if (!pkg) return false;
+
+  if (pkg.meta){
+    document.getElementById('nome').value = pkg.meta.nome || '';
+    document.getElementById('pessoas').value = pkg.meta.pessoas || 45;
+    document.getElementById('periodo').value = pkg.meta.periodo || '';
+  }
+  if (!pkg.cardapio) return false;
+
+  document.getElementById('dias').value = pkg.cardapio.dias || 3;
+  refeicoes = comoArray(pkg.cardapio.refeicoes).map(function(r){
+    return {nome: r.nome || '', pratos: comoArray(r.pratos)};
+  });
+  extrasMarcados = comoArray(pkg.cardapio.extras);
+  pratosCustom = comoArray(pkg.cardapio.pratosCustom).map(function(p){
+    p.ing = comoArray(p.ing);
+    return p;
+  });
+  renderExtras();
+  renderRefeicoes();
+  atualizarPrevia();
+  return true;
+}
+
+function esqueletoDeFimDeSemana(){
+  novaRefeicao('Almoço de sábado',  ['salsichao','maionese','sobremesa-doce']);
+  novaRefeicao('Jantar de sábado',  ['massa-guisado']);
+  novaRefeicao('Café de domingo',   ['cafe-pao-pate','cafe-bolo']);
+  novaRefeicao('Almoço de domingo', ['carreteiro','feijao','salada-verde','sobremesa-gelatina']);
+}
+
 function iniciar(){
   renderExtras();
 
-  /* editando um cardápio que já existe */
-  if (ID){
-    var t = lsLer(chaveLista(ID));
-    if (t){
-      try {
-        var pkg = JSON.parse(t);
-        if (pkg.meta){
-          document.getElementById('nome').value = pkg.meta.nome || '';
-          document.getElementById('pessoas').value = pkg.meta.pessoas || 45;
-          document.getElementById('periodo').value = pkg.meta.periodo || '';
-        }
-        if (pkg.cardapio){
-          document.getElementById('dias').value = pkg.cardapio.dias || 3;
-          refeicoes = pkg.cardapio.refeicoes || [];
-          extrasMarcados = pkg.cardapio.extras || [];
-          renderExtras();
-        }
-      } catch (e) {}
-    }
-    document.getElementById('gerar').textContent = 'Regerar a lista';
+  if (!ID){
+    /* Retiro novo abre com um esqueleto de fim de semana, para a pessoa ter
+       algo concreto para editar em vez de encarar uma tela em branco. */
+    esqueletoDeFimDeSemana();
+    renderRefeicoes();
+    atualizarPrevia();
+    return;
   }
 
-  /* retiro novo já abre com um esqueleto de fim de semana, para a pessoa
-     ter algo concreto para editar em vez de uma tela em branco */
-  if (!refeicoes.length){
-    novaRefeicao('Almoço de sábado',  ['salsichao','maionese','sobremesa-doce']);
-    novaRefeicao('Jantar de sábado',  ['massa-guisado']);
-    novaRefeicao('Café de domingo',   ['cafe-pao-pate','cafe-bolo']);
-    novaRefeicao('Almoço de domingo', ['carreteiro','feijao','salada-verde','sobremesa-gelatina']);
+  document.getElementById('gerar').textContent = 'Regerar a lista';
+
+  var achou = false;
+  var t = lsLer(chaveLista(ID));
+  if (t){
+    try { achou = preencherDe(JSON.parse(t)); } catch (e) {}
+  }
+  if (!achou){
+    esqueletoDeFimDeSemana();
+    renderRefeicoes();
+    atualizarPrevia();
   }
 
-  renderRefeicoes();
-  atualizarPrevia();
+  /* O localStorage é só um atalho: em outro aparelho, ou depois de limpar o
+     navegador, o cardápio só existe no banco. Sem esta busca, reabrir para
+     recalcular abriria a tela em branco e apagaria o cardápio ao gerar. */
+  if (temSync()){
+    dbGet('retiros/' + ID).then(function(pkg){
+      if (!pkg) return;
+      var tinhaCardapio = preencherDe(pkg);
+      if (tinhaCardapio) lsGravar(chaveLista(ID), JSON.stringify(pkg));
+    }).catch(function(){});
+  }
 }
 
 iniciar();
