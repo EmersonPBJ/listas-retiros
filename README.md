@@ -311,9 +311,17 @@ A chave do KV é o mês corrente, então o contador zera sozinho na virada e os
 meses velhos somem com o TTL. O contador só anda em chamada que realmente
 chegou na IA e voltou: erro de chave ou de rede não consome cota.
 
-Cada consulta é uma chamada ao `claude-opus-5`. Montar um retiro gasta algo
-entre 5 e 15 consultas. Com o teto em 60, cabem os 2 retiros por mês esperados
-com folga larga, e o gasto fica na casa de centavos de dólar por mês.
+Cada consulta é uma chamada ao `claude-opus-5`. **Medido na prática, não
+estimado: cerca de US$ 0,09 por consulta**, com `effort: low`. Uma estimativa
+anterior de "centavos por retiro" estava errada por umas três vezes, porque
+ignorava os tokens de raciocínio, que são cobrados como saída.
+
+Montar um retiro gasta entre 5 e 15 consultas, ou seja, algo entre US$ 0,45 e
+US$ 1,35 por retiro. Dois retiros por mês ficam perto de US$ 2. Com o teto em
+60 consultas, o pior mês possível custa cerca de US$ 5.
+
+Se isso pesar, o botão de perguntar no ChatGPT faz o mesmo trabalho de graça, e
+trocar o modelo por `claude-haiku-4-5` corta o custo uma ordem de grandeza.
 
 Vale pôr também um limite de gasto no painel da Anthropic, em Billing: é a
 segunda trava, independente desta, e é grátis de configurar.
