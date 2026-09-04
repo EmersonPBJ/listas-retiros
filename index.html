@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anjo da cozinha de Retiros Igreja</title>
-<link rel="stylesheet" href="app.css?v=6">
+<link rel="stylesheet" href="app.css?v=7">
 </head><body>
 
 <div class="wrap">
@@ -36,7 +36,7 @@
   </div>
 
   <div class="novo js-only">
-    <h3>Criar um retiro</h3>
+    <h3>Criar o cardápio de um retiro</h3>
     <label for="nome">Nome do retiro</label>
     <input id="nome" placeholder="7º Acamps 7 Jovens" autocomplete="off">
     <div class="dois">
@@ -81,9 +81,9 @@
 
 <div id="toast" class="js-only"><span id="toast-msg"></span><button id="undo">Desfazer</button></div>
 
-<script src="config.js?v=6"></script>
-<script src="modelo.js?v=6"></script>
-<script src="receitas.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="modelo.js?v=7"></script>
+<script src="receitas.js?v=7"></script>
 <script>
 document.documentElement.className = '';
 
@@ -119,22 +119,12 @@ function gravarIndiceLocal(){ lsGravar(CHAVE_INDICE, JSON.stringify(indice)); }
 
 /* ---------- desenho ---------- */
 
-/* O selo colorido a esquerda de cada retiro. A cor sai do proprio nome, entao
-   e sempre a mesma para o mesmo retiro, em qualquer aparelho, sem precisar
-   guardar nada. Sao as cores das secoes do mercado, para nao inventar paleta. */
-var CORES_SELO = ['#c2410c','#0369a1','#15803d','#7c3aed','#a16207',
-                  '#be123c','#0f766e','#db2777','#475569'];
-
-function corDoNome(nome){
-  var soma = 0;
-  for (var i = 0; i < nome.length; i++) soma = (soma + nome.charCodeAt(i)) % 9973;
-  return CORES_SELO[soma % CORES_SELO.length];
-}
-
-function inicial(nome){
-  var m = String(nome).match(/[A-Za-zÀ-ÿ0-9]/);
-  return m ? m[0].toUpperCase() : '?';
-}
+/* O selo a esquerda de cada retiro. E sempre o mesmo, uma cruz branca no
+   quadrado verde: e um marcador catolico que ancora a linha, nao um dado. */
+var SELO = '<span class="selo" aria-hidden="true">'
+  + '<svg viewBox="0 0 24 24" width="19" height="19">'
+  +   '<path d="M10.4 2h3.2v5.2H19v3.2h-5.4V22h-3.2V10.4H5V7.2h5.4z" fill="currentColor"/>'
+  + '</svg></span>';
 
 function progresso(id){
   var t = lsLer(chaveLista(id));
@@ -176,8 +166,7 @@ function render(){
 
     return '<li>'
       + '<a href="lista.html?r=' + encodeURIComponent(id) + '">'
-      +   '<span class="selo" style="background:' + corDoNome(r.nome || id) + '"'
-      +     ' aria-hidden="true">' + esc(inicial(r.nome || id)) + '</span>'
+      +   SELO
       +   '<span class="rt">'
       +     '<span class="rn">' + esc(r.nome || id) + '</span>'
       +     (fatos.length ? '<span class="rf">' + esc(fatos.join('  ·  ')) + '</span>' : '')
