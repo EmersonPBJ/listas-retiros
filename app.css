@@ -464,3 +464,23 @@ ul.insumos b{
 .alerta.baixa{background:#f8faf9;border-left-color:#c3ccc7;}
 
 @media print{ .botao-ia,.alerta,#bloco-revisao{display:none !important;} }
+
+/* ---------- ponte para o ChatGPT ---------- */
+.botao-ponte{
+  display:block;width:100%;margin-top:10px;
+  font-family:inherit;font-size:14px;font-weight:600;padding:11px 16px;
+  border-radius:9px;cursor:pointer;
+  border:1px solid var(--green);background:var(--green);color:#fff;
+}
+#ponte{
+  margin-top:14px;padding:13px;border-radius:10px;
+  background:#f8faf9;border:1px solid var(--line);
+}
+#ponte textarea{
+  width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px;line-height:1.5;padding:10px;margin-bottom:6px;
+  border:1px solid #c3ccc7;border-radius:7px;background:#fff;color:var(--ink);
+  resize:vertical;
+}
+#ponte-pergunta{background:#fff;color:var(--muted);}
+@media print{ .botao-ponte,#ponte{display:none !important;} }

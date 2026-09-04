@@ -238,6 +238,25 @@ navegador  ->  anjo-cozinha-ia.raiseupfoto.workers.dev  ->  api.anthropic.com
 (sem chave)         (chave em secret)
 ```
 
+### O caminho de graça: a ponte
+
+Assinatura de ChatGPT ou de Claude **não dá acesso à API deles**. São cobranças
+separadas, e automatizar o site do chat por fora quebra os termos e para de
+funcionar sozinho. Então existe um segundo caminho, que não custa nada e usa a
+conta que a pessoa já paga, do jeito que ela foi feita para ser usada.
+
+O botão "Perguntar no ChatGPT ou no Claude" monta a pergunta com o formato de
+resposta embutido, copia para a área de transferência e abre o chat numa aba
+nova. A pessoa cola, envia, e traz a resposta de volta para o campo de colar.
+
+O que volta de um chat quase nunca é JSON puro: vem com cerca de código, uma
+frase antes e um "espero ter ajudado" depois. O `extrairJSON()` pega do
+primeiro `{` até o último `}` e ignora o resto. Seção ou unidade que o modelo
+inventar caem no palpite mais seguro, e a tela diz quantos campos foram
+ajustados, para não corrigir nada escondido.
+
+Este caminho aparece sempre, independente do Worker estar configurado.
+
 ### Duas ações
 
 - `sugerir-prato`: recebe o nome de um prato e um número de pessoas, devolve os

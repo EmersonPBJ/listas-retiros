@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Montar o cardápio</title>
-<link rel="stylesheet" href="app.css?v=11">
+<link rel="stylesheet" href="app.css?v=13">
 </head><body>
 
 <div class="wrap">
@@ -123,7 +123,24 @@
     <button class="botao-ia js-only" id="pc-ia" style="display:none">
       Sugerir os ingredientes com IA
     </button>
+    <button class="botao-ponte js-only" id="pc-ponte">
+      Perguntar no ChatGPT ou no Claude (de graça)
+    </button>
     <p class="ajuda" id="pc-ia-status" style="display:none"></p>
+
+    <div id="ponte" style="display:none">
+      <p class="ajuda">
+        <b>1.</b> A pergunta já foi copiada. Abra o ChatGPT ou o Claude, cole e envie.
+      </p>
+      <textarea id="ponte-pergunta" rows="5" readonly aria-label="pergunta para copiar"></textarea>
+      <button class="add" id="ponte-copiar">copiar de novo</button>
+
+      <p class="ajuda"><b>2.</b> Cole aqui a resposta que ele deu.</p>
+      <textarea id="ponte-resposta" rows="4"
+        placeholder="Cole aqui o que o ChatGPT respondeu" aria-label="resposta"></textarea>
+      <button class="botao-ponte" id="ponte-usar">Usar esta resposta</button>
+      <p class="ajuda" id="ponte-status"></p>
+    </div>
 
     <label>Ingredientes</label>
     <div id="pc-ing"></div>
@@ -143,9 +160,9 @@
   <span id="status">monte o período acima</span>
 </div>
 
-<script src="config.js?v=11"></script>
-<script src="modelo.js?v=11"></script>
-<script src="receitas.js?v=11"></script>
+<script src="config.js?v=13"></script>
+<script src="modelo.js?v=13"></script>
+<script src="receitas.js?v=13"></script>
 <script>
 document.documentElement.className = '';
 
@@ -348,6 +365,9 @@ function abrirEditorPrato(indiceRefeicao){
 
 function fecharEditorPrato(){
   document.getElementById('editor-fundo').style.display = 'none';
+  document.getElementById('ponte').style.display = 'none';
+  document.getElementById('ponte-resposta').value = '';
+  statusIA('');
   editandoRefeicao = null;
 }
 
@@ -395,6 +415,126 @@ document.getElementById('pc-salvar').addEventListener('click', function(){
   renderRefeicoes();
   atualizarPrevia();
   toast('"' + prato.nome + '" entrou no cardápio');
+});
+
+/* ---------- a ponte para o ChatGPT ----------
+   Assinatura de ChatGPT ou de Claude nao da acesso a API deles, e automatizar
+   o site por fora quebra os termos. O caminho honesto e este: a ferramenta
+   monta a pergunta, a pessoa faz a consulta na conta que ja paga, e cola a
+   resposta de volta. Nao custa nada e funciona com qualquer assistente. */
+
+var GRUPOS_TXT = GRUPOS.join(' | ');
+var SECOES_TXT = SECOES.map(function(s){ return s.t; }).join(' | ');
+var UNIDADES_TXT = UNIDADES.join(' | ');
+
+function perguntaDoPrato(prato, pessoas, refeicao){
+  return 'Preciso servir "' + prato + '" para ' + pessoas + ' pessoas num retiro de igreja'
+    + (refeicao ? ', no ' + refeicao : '') + '.\n\n'
+    + 'Liste os ingredientes com a quantidade TOTAL para essas ' + pessoas + ' pessoas.\n'
+    + 'Inclua tempero e o que costuma ser esquecido. Retiro serve à vontade, melhor sobrar\n'
+    + 'do que faltar. Use quantidades redondas de compra de mercado brasileiro.\n'
+    + 'NÃO inclua água, guardanapo, gás nem material de limpeza.\n\n'
+    + 'Responda SÓ com este JSON, sem nenhum texto antes nem depois:\n\n'
+    + '{"nome":"' + prato + '","grupo":"Prato principal","ingredientes":[\n'
+    + '  {"nome":"Arroz","secao":"Mercearia","quantidade":5,"unidade":"kg"}\n'
+    + '],"observacao":"um aviso curto de cozinha, ou vazio"}\n\n'
+    + 'grupo tem que ser um destes: ' + GRUPOS_TXT + '\n'
+    + 'secao tem que ser uma destas: ' + SECOES_TXT + '\n'
+    + 'unidade tem que ser uma destas: ' + UNIDADES_TXT;
+}
+
+/* O que volta do chat quase nunca e JSON puro: vem com ```json em volta, ou
+   com uma frase antes. Pega do primeiro { ate a ultima } e tenta. */
+function extrairJSON(texto){
+  var t = String(texto || '').trim();
+  t = t.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
+  var a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
+}
+
+/* Devolve true se conseguiu copiar. Nunca rejeita: copiar é uma conveniência,
+   e falhar nisso não pode impedir o resto do fluxo de acontecer. */
+function copiar(texto){
+  function naMao(){
+    var el = document.getElementById('ponte-pergunta');
+    el.focus(); el.select();
+    try { return document.execCommand('copy'); } catch (e) { return false; }
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(texto)
+        .then(function(){ return true; })
+        .catch(function(){ return naMao(); });
+    }
+  } catch (e) {}
+  return Promise.resolve(naMao());
+}
+
+document.getElementById('pc-ponte').addEventListener('click', function(){
+  var nome = document.getElementById('pc-nome').value.trim();
+  if (!nome){
+    alert('Escreva o nome do prato primeiro, para eu montar a pergunta.');
+    document.getElementById('pc-nome').focus();
+    return;
+  }
+  var base = Math.max(1, parseInt(document.getElementById('pc-base').value, 10) || pessoasDoForm());
+  var ref = editandoRefeicao !== null && refeicoes[editandoRefeicao]
+    ? refeicoes[editandoRefeicao].nome : '';
+
+  var pergunta = perguntaDoPrato(nome, base, ref);
+  var caixa = document.getElementById('ponte-pergunta');
+  caixa.value = pergunta;
+  document.getElementById('ponte').style.display = '';
+  document.getElementById('ponte-status').textContent = '';
+
+  copiar(pergunta).then(function(deu){
+    document.querySelector('#ponte .ajuda').innerHTML = deu
+      ? '<b>1.</b> A pergunta já foi copiada. Abra o ChatGPT ou o Claude, cole e envie.'
+      : '<b>1.</b> Copie a pergunta abaixo, abra o ChatGPT ou o Claude, cole e envie.';
+    window.open('https://chatgpt.com/', '_blank', 'noopener');
+  });
+});
+
+document.getElementById('ponte-copiar').addEventListener('click', function(){
+  copiar(document.getElementById('ponte-pergunta').value).then(function(deu){
+    document.getElementById('ponte-status').textContent = deu
+      ? 'Pergunta copiada.'
+      : 'Não consegui copiar sozinho. Selecione o texto acima e copie na mão.';
+  });
+});
+
+document.getElementById('ponte-usar').addEventListener('click', function(){
+  var st = document.getElementById('ponte-status');
+  var dados = extrairJSON(document.getElementById('ponte-resposta').value);
+
+  if (!dados || !dados.ingredientes || !dados.ingredientes.length){
+    st.className = 'ajuda ajuda-erro';
+    st.textContent = 'Não achei a lista na resposta. Cole o texto inteiro que ele devolveu, '
+      + 'incluindo as chaves { }.';
+    return;
+  }
+
+  if (dados.nome) document.getElementById('pc-nome').value = dados.nome;
+  if (dados.grupo && GRUPOS.indexOf(dados.grupo) >= 0){
+    document.getElementById('pc-grupo').value = dados.grupo;
+  }
+  document.getElementById('pc-ing').innerHTML = '';
+  var fora = 0;
+  dados.ingredientes.forEach(function(i){
+    var sec = i.secao, un = i.unidade;
+    /* Se ele inventou uma seção ou unidade que não existe aqui, cai no palpite
+       mais seguro em vez de a linha sumir sem a pessoa perceber. */
+    if (SECOES.map(function(s){ return s.t; }).indexOf(sec) < 0){ sec = 'Mercearia'; fora++; }
+    if (UNIDADES.indexOf(un) < 0){ un = 'un'; fora++; }
+    addLinha({n: i.nome, sec: sec, q: numeroBR(i.quantidade), un: un});
+  });
+
+  st.className = 'ajuda';
+  st.textContent = 'Pronto, ' + dados.ingredientes.length + ' ingredientes.'
+    + (fora ? ' ' + fora + ' campo(s) vieram fora do padrão e foram ajustados, confira.' : '')
+    + (dados.observacao ? ' ' + dados.observacao : ' Confira antes de salvar.');
+  document.getElementById('ponte-resposta').value = '';
 });
 
 /* Quantas consultas ainda cabem no mes. Existe para ninguem ser pego de
