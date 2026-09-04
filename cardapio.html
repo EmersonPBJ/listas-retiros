@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Montar o cardápio</title>
-<link rel="stylesheet" href="app.css?v=10">
+<link rel="stylesheet" href="app.css?v=11">
 </head><body>
 
 <div class="wrap">
@@ -77,6 +77,7 @@
       Vale principalmente para quem nunca organizou uma cozinha de retiro.
     </p>
     <button class="botao-ia" id="revisar">Revisar o cardápio com IA</button>
+    <p class="ajuda" id="saldo-ia"></p>
     <div id="revisao"></div>
   </div>
 
@@ -142,9 +143,9 @@
   <span id="status">monte o período acima</span>
 </div>
 
-<script src="config.js?v=10"></script>
-<script src="modelo.js?v=10"></script>
-<script src="receitas.js?v=10"></script>
+<script src="config.js?v=11"></script>
+<script src="modelo.js?v=11"></script>
+<script src="receitas.js?v=11"></script>
 <script>
 document.documentElement.className = '';
 
@@ -396,6 +397,19 @@ document.getElementById('pc-salvar').addEventListener('click', function(){
   toast('"' + prato.nome + '" entrou no cardápio');
 });
 
+/* Quantas consultas ainda cabem no mes. Existe para ninguem ser pego de
+   surpresa por um limite que nao sabia que existia. */
+function mostrarSaldo(){
+  var p = document.getElementById("saldo-ia");
+  if (!p) return;
+  pedirIA({acao: "saldo"}).then(function(r){
+    p.textContent = r.restam > 0
+      ? ("Restam " + r.restam + " de " + r.teto + " consultas de IA neste mês.")
+      : ("As " + r.teto + " consultas do mês acabaram. A lista continua sendo calculada normalmente.");
+    p.className = "ajuda" + (r.restam > 0 ? "" : " ajuda-erro");
+  }).catch(function(){ p.textContent = ""; });
+}
+
 /* ---------- a IA ----------
    Quem fala com a Anthropic é o Worker, não esta página: a chave da API não
    pode viver num arquivo público. Se IA_URL estiver vazia, os botões nem
@@ -437,6 +451,7 @@ document.getElementById('pc-ia').addEventListener('click', function(){
       p.ingredientes.forEach(function(i){
         addLinha({n: i.nome, sec: i.secao, q: numeroBR(i.quantidade), un: i.unidade});
       });
+      mostrarSaldo();
       statusIA(p.observacao
         ? ('Confira antes de salvar. ' + p.observacao)
         : 'Confira antes de salvar, a IA erra.');
@@ -473,6 +488,7 @@ document.getElementById('revisar').addEventListener('click', function(){
   }).then(function(r){
     var rev = r.revisao || {};
     var alertas = rev.alertas || [], faltando = rev.faltando || [];
+    mostrarSaldo();
     if (!alertas.length && !faltando.length){
       caixa.innerHTML = '<p class="ajuda">A IA não achou nada faltando. Bom sinal.</p>';
       return;
@@ -705,6 +721,7 @@ function iniciar(){
   if (temIA()){
     document.getElementById("pc-ia").style.display = "";
     document.getElementById("bloco-revisao").style.display = "";
+    mostrarSaldo();
   }
 
   montarSelects();

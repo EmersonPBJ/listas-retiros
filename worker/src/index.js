@@ -66,6 +66,35 @@ Regras de quantidade:
 
 Escreva em português do Brasil, sem travessão.`;
 
+/* -------- teto de gasto --------
+   O medo real de pôr uma chave de API num botão público não é a conta do mês
+   normal, é o mês em que algo dá errado e ninguém percebe. Este contador
+   existe para esse caso: passando do teto, o Worker simplesmente para de
+   chamar a IA. O site continua funcionando no cálculo determinístico, que não
+   custa nada, e a pessoa vê uma mensagem explicando.
+
+   A chave do KV é o mês, então o contador zera sozinho na virada e os meses
+   velhos somem com o TTL. */
+
+function mesAtual(){
+  const d = new Date();
+  return 'uso-' + d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+}
+
+async function usoDoMes(env){
+  if (!env.USO) return 0;
+  const v = await env.USO.get(mesAtual());
+  return parseInt(v, 10) || 0;
+}
+
+async function contarUso(env){
+  if (!env.USO) return;
+  const chave = mesAtual();
+  const atual = parseInt(await env.USO.get(chave), 10) || 0;
+  /* 70 dias de validade: cobre o mês inteiro e some sozinho depois. */
+  await env.USO.put(chave, String(atual + 1), { expirationTtl: 60 * 60 * 24 * 70 });
+}
+
 function cabecalhosCors(origem, permitidas){
   const ok = origem && permitidas.includes(origem);
   return {
@@ -96,13 +125,28 @@ export default {
     if (!origem || !permitidas.includes(origem)) {
       return json({ erro: 'Origem não autorizada.' }, 403, cors);
     }
-    if (!env.ANTHROPIC_API_KEY) {
-      return json({ erro: 'O Worker está sem a chave. Rode: wrangler secret put ANTHROPIC_API_KEY' }, 500, cors);
-    }
-
     let corpo;
     try { corpo = await request.json(); }
     catch (e) { return json({ erro: 'Corpo inválido.' }, 400, cors); }
+
+    /* Consulta de saldo, para a tela poder avisar antes de a pessoa tentar. */
+    const teto = parseInt(env.TETO_MENSAL, 10) || 60;
+    const usadas = await usoDoMes(env);
+    if (corpo.acao === 'saldo'){
+      return json({ usadas: usadas, teto: teto, restam: Math.max(0, teto - usadas) }, 200, cors);
+    }
+
+    if (usadas >= teto){
+      return json({
+        erro: 'O limite de ' + teto + ' consultas deste mês acabou. A lista continua '
+          + 'sendo calculada normalmente, só sem a ajuda da IA. O contador zera no dia 1.',
+        limiteAtingido: true, usadas: usadas, teto: teto
+      }, 429, cors);
+    }
+
+    if (!env.ANTHROPIC_API_KEY) {
+      return json({ erro: 'O Worker está sem a chave. Rode: wrangler secret put ANTHROPIC_API_KEY' }, 500, cors);
+    }
 
     const pessoas = Math.min(2000, Math.max(1, parseInt(corpo.pessoas, 10) || 1));
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
@@ -132,7 +176,9 @@ export default {
         if (r.stop_reason === 'refusal') {
           return json({ erro: 'O modelo não respondeu a este pedido.' }, 422, cors);
         }
-        return json({ prato: r.parsed_output, pessoas: pessoas }, 200, cors);
+        await contarUso(env);
+        return json({ prato: r.parsed_output, pessoas: pessoas,
+                      usadas: usadas + 1, teto: teto }, 200, cors);
       }
 
       if (corpo.acao === 'revisar-cardapio') {
@@ -166,7 +212,9 @@ export default {
         if (r.stop_reason === 'refusal') {
           return json({ erro: 'O modelo não respondeu a este pedido.' }, 422, cors);
         }
-        return json({ revisao: r.parsed_output, pessoas: pessoas }, 200, cors);
+        await contarUso(env);
+        return json({ revisao: r.parsed_output, pessoas: pessoas,
+                      usadas: usadas + 1, teto: teto }, 200, cors);
       }
 
       return json({ erro: 'Ação desconhecida.' }, 400, cors);

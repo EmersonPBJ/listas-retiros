@@ -8,6 +8,18 @@ compatibility_flags = ["nodejs_compat"]
 # chave da Anthropic. O navegador so envia a requisicao se a origem bater.
 ORIGENS_PERMITIDAS = "https://emersonpbj.github.io,http://localhost:4199,http://localhost:4173"
 
+# Teto de chamadas por mes. Existe para o gasto nunca escapar: passando disso,
+# o Worker para de chamar a IA e o site cai no calculo determinstico, que nao
+# custa nada. Um retiro montado gasta algo entre 5 e 15 chamadas, entao 60
+# cobre com folga os 2 retiros por mes esperados.
+TETO_MENSAL = "60"
+
 # A chave da API NAO fica aqui. Ela e um secret, guardado cifrado na
 # Cloudflare, e se configura com:
-#     wrangler secret put ANTHROPIC_API_KEY
+#     npx wrangler secret put ANTHROPIC_API_KEY
+
+# Contador de uso do mes. Worker e sem memoria, entao o contador precisa
+# morar em algum lugar; KV e o mais barato e simples para um numero so.
+[[kv_namespaces]]
+binding = "USO"
+id = "08f94721d1b6480d934df06ad920047f"
