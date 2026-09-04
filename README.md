@@ -281,8 +281,8 @@ guarda uma chave de teste e está no `.gitignore`.
 
 O medo real de pôr uma chave de API atrás de um botão público não é a conta do
 mês normal, é o mês em que algo dá errado e ninguém percebe. Por isso o Worker
-conta as chamadas do mês num KV e para sozinho ao bater , que
-está no .
+conta as chamadas do mês num KV e para sozinho ao bater `TETO_MENSAL`, que está
+no `worker/wrangler.toml`.
 
 Passando do teto, a IA para e **o site continua funcionando**, no cálculo
 determinístico, que não custa nada. A tela mostra quantas consultas restam,
@@ -292,9 +292,9 @@ A chave do KV é o mês corrente, então o contador zera sozinho na virada e os
 meses velhos somem com o TTL. O contador só anda em chamada que realmente
 chegou na IA e voltou: erro de chave ou de rede não consome cota.
 
-Montar um retiro gasta algo entre 5 e 15 consultas. Com o teto em 60, cabem os
-2 retiros por mês esperados com folga larga, e o gasto fica na casa de
-centavos de dólar por mês.
+Cada consulta é uma chamada ao `claude-opus-5`. Montar um retiro gasta algo
+entre 5 e 15 consultas. Com o teto em 60, cabem os 2 retiros por mês esperados
+com folga larga, e o gasto fica na casa de centavos de dólar por mês.
 
 Vale pôr também um limite de gasto no painel da Anthropic, em Billing: é a
 segunda trava, independente desta, e é grátis de configurar.
