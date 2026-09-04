@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Montar o cardápio</title>
-<link rel="stylesheet" href="app.css?v=7">
+<link rel="stylesheet" href="app.css?v=8">
 </head><body>
 
 <div class="wrap">
@@ -11,8 +11,9 @@
 
   <div class="top">
     <h1>Montar<br>o cardápio</h1>
-    <p class="facts">
-      <span>diga o que vai servir, a lista sai pronta</span>
+    <p class="intro">
+      Diga quando começa e quando termina, monte cada refeição, e a lista de
+      compras sai calculada para o número de pessoas.
     </p>
   </div>
 
@@ -20,28 +21,38 @@
     <h3>1. O retiro</h3>
     <label for="nome">Nome do retiro</label>
     <input id="nome" placeholder="7º Acamps 7 Jovens" autocomplete="off">
+    <label for="pessoas">Quantas pessoas</label>
+    <input id="pessoas" inputmode="numeric" value="45" autocomplete="off">
+
+    <label>A primeira refeição servida</label>
     <div class="dois">
-      <div>
-        <label for="pessoas">Pessoas</label>
-        <input id="pessoas" inputmode="numeric" value="45" autocomplete="off">
-      </div>
-      <div>
-        <label for="dias">Dias</label>
-        <input id="dias" inputmode="numeric" value="3" autocomplete="off">
-      </div>
+      <div><select id="dia-ini" aria-label="dia da primeira refeição"></select></div>
+      <div><select id="tipo-ini" aria-label="tipo da primeira refeição"></select></div>
     </div>
-    <label for="periodo">Período (opcional)</label>
-    <input id="periodo" placeholder="sábado ao meio-dia até segunda no almoço" autocomplete="off">
+
+    <label>A última refeição servida</label>
+    <div class="dois">
+      <div><select id="dia-fim" aria-label="dia da última refeição"></select></div>
+      <div><select id="tipo-fim" aria-label="tipo da última refeição"></select></div>
+    </div>
+
+    <button id="montar">Montar as refeições do período</button>
+    <p class="ajuda" style="margin:10px 0 0">
+      A ferramenta preenche sozinha tudo o que acontece entre uma coisa e
+      outra, seguindo o ciclo café da manhã, almoço, café da tarde e janta.
+    </p>
   </div>
 
   <div class="etapa">
-    <h3>2. As refeições</h3>
-    <p class="ajuda">
-      Uma refeição por bloco. Dê o nome e marque o que vai ser servido. Um almoço
-      costuma ter um prato principal, um ou dois acompanhamentos e a sobremesa.
+    <div class="head historico">
+      <span class="dot" style="background:var(--green)"></span>
+      <h2 id="titulo-refeicoes">2. As refeições</h2>
+    </div>
+    <p class="ajuda" id="ajuda-refeicoes">
+      Monte o período acima e as refeições aparecem aqui.
     </p>
     <div id="refeicoes"></div>
-    <button class="add" id="addref">+ adicionar refeição</button>
+    <button class="add" id="addref">+ acrescentar uma refeição</button>
   </div>
 
   <div class="etapa">
@@ -53,7 +64,7 @@
     <div id="extras" class="chips"></div>
   </div>
 
-  <div class="etapa" id="previa-caixa">
+  <div class="etapa">
     <h3>4. Prévia da lista</h3>
     <p class="ajuda" id="previa-resumo">Monte pelo menos uma refeição para ver a prévia.</p>
     <div id="previa"></div>
@@ -61,10 +72,11 @@
 
   <div class="aviso">
     <b>As quantidades são sugestão, não evangelho.</b> Elas vêm da lista real do
-    6º Acamps 7 Jovens, que era para 45 pessoas em 3 dias, convertida em taxa por
-    pessoa. Serve muito bem de ponto de partida, e tudo continua editável na
-    lista depois. Quem já tem experiência de cozinha deve conferir o que for
-    prato principal.
+    6º Acamps 7 Jovens, que era para 45 pessoas em 3 dias, convertida em taxa
+    por pessoa. Serve muito bem de ponto de partida, e tudo continua editável na
+    lista depois. Os pratos marcados com <b>~</b> são estimativa, não saíram
+    daquele retiro. Quem tem experiência de cozinha deve conferir os pratos
+    principais.
   </div>
 
   <div class="sign">
@@ -91,6 +103,9 @@
     <label for="pc-nome">Nome do prato</label>
     <input id="pc-nome" placeholder="Tilápia com arroz" autocomplete="off">
 
+    <label for="pc-grupo">Onde ele entra na refeição</label>
+    <select id="pc-grupo"></select>
+
     <label for="pc-base">As quantidades abaixo dão para quantas pessoas?</label>
     <input id="pc-base" inputmode="numeric" value="45" autocomplete="off">
 
@@ -109,17 +124,16 @@
 
 <div class="savebar js-only">
   <button id="gerar">Gerar a lista</button>
-  <span id="status">nenhuma refeição montada ainda</span>
+  <span id="status">monte o período acima</span>
 </div>
 
-<script src="config.js?v=7"></script>
-<script src="modelo.js?v=7"></script>
-<script src="receitas.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="modelo.js?v=8"></script>
+<script src="receitas.js?v=8"></script>
 <script>
 document.documentElement.className = '';
 
-/* Se veio com ?r=<id>, está editando o cardápio de um retiro que já existe.
-   Sem id, está criando um retiro novo. */
+/* Se veio com ?r=<id>, está editando o cardápio de um retiro que já existe. */
 var ID = (function(){
   var m = location.search.match(/[?&]r=([^&]+)/);
   return m ? decodeURIComponent(m[1]) : '';
@@ -127,10 +141,10 @@ var ID = (function(){
 
 var refeicoes = [];
 var extrasMarcados = [];
-var pratosCustom = [];   /* pratos que a propria pessoa cadastrou neste retiro */
+var pratosCustom = [];
 var editandoRefeicao = null;
 
-var UNIDADES = ['kg','g','L','ml','un','dz','latas','cx','pct','potes','maços','pés','rolos'];
+var UNIDADES = ['kg','g','L','ml','un','dz','latas','cx','pct','potes','maços','pés','rolos','vidro'];
 
 function esc(s){
   return String(s == null ? '' : s)
@@ -138,51 +152,104 @@ function esc(s){
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ---------- pratos agrupados por tipo ---------- */
+function opcoes(lista, selecionado, valorDe, textoDe){
+  return lista.map(function(x){
+    var v = valorDe ? valorDe(x) : x;
+    var t = textoDe ? textoDe(x) : x;
+    return '<option value="' + esc(v) + '"' + (v === selecionado ? ' selected' : '') + '>'
+      + esc(t) + '</option>';
+  }).join('');
+}
 
-var TIPOS = ['Prato principal', 'Acompanhamento', 'Lanche', 'Café da manhã', 'Sobremesa'];
+/* ---------- etapa 1: o período ---------- */
 
-function chipsDePratos(indice){
+function montarSelects(){
+  var mesmo = function(d){ return d; };
+  document.getElementById('dia-ini').innerHTML  = opcoes(DIAS_SEMANA, 'Sábado', mesmo, mesmo);
+  document.getElementById('dia-fim').innerHTML  = opcoes(DIAS_SEMANA, 'Segunda', mesmo, mesmo);
+  var vId = function(t){ return t.id; }, vNome = function(t){ return t.nome; };
+  document.getElementById('tipo-ini').innerHTML = opcoes(TIPOS_REFEICAO, 'almoco', vId, vNome);
+  document.getElementById('tipo-fim').innerHTML = opcoes(TIPOS_REFEICAO, 'almoco', vId, vNome);
+  document.getElementById('pc-grupo').innerHTML = opcoes(GRUPOS, 'Prato principal');
+}
+
+function periodoDoForm(){
+  return {
+    diaIni:  document.getElementById('dia-ini').value,
+    tipoIni: document.getElementById('tipo-ini').value,
+    diaFim:  document.getElementById('dia-fim').value,
+    tipoFim: document.getElementById('tipo-fim').value
+  };
+}
+
+document.getElementById('montar').addEventListener('click', function(){
+  var p = periodoDoForm();
+  var novas = gerarRefeicoesDoPeriodo(p.diaIni, p.tipoIni, p.diaFim, p.tipoFim);
+  if (!novas.length){ alert('Não consegui montar esse período.'); return; }
+
+  /* Remontar não pode jogar fora o que já foi escolhido: o que a pessoa marcou
+     numa refeição volta se aquela refeição continuar existindo no período. */
+  var antes = {};
+  refeicoes.forEach(function(r){ antes[r.nome] = r.pratos; });
+  novas.forEach(function(r){ if (antes[r.nome]) r.pratos = antes[r.nome]; });
+
+  refeicoes = novas;
+  renderRefeicoes();
+  atualizarPrevia();
+  document.getElementById('refeicoes').scrollIntoView({block:'start'});
+});
+
+/* ---------- etapa 2: as refeições ---------- */
+
+function chipsDaRefeicao(indice){
+  var ref = refeicoes[indice];
   var out = '';
 
-  function grupo(titulo, pratos, extraHTML){
-    if (!pratos.length && !extraHTML) return;
-    out += '<div class="grupo"><span class="grupo-t">' + esc(titulo) + '</span><div class="chips">';
-    pratos.forEach(function(p){
-      var ativo = refeicoes[indice].pratos.indexOf(p.id) >= 0;
+  pratosPorGrupo(ref.tipo, pratosCustom).forEach(function(g){
+    out += '<div class="grupo"><span class="grupo-t">' + esc(g.grupo) + '</span><div class="chips">';
+    g.pratos.forEach(function(p){
+      var ativo = ref.pratos.indexOf(p.id) >= 0;
       out += '<button type="button" class="chip' + (ativo ? ' on' : '') + '"'
         + ' data-ref="' + indice + '" data-prato="' + esc(p.id) + '">'
         + esc(p.nome)
         + (p.estimado ? '<i title="quantidade estimada, não veio de retiro real">~</i>' : '')
         + '</button>';
     });
-    out += (extraHTML || '') + '</div></div>';
-  }
-
-  TIPOS.forEach(function(tipo){
-    grupo(tipo, PRATOS.filter(function(p){ return p.tipo === tipo; }), '');
+    out += '</div></div>';
   });
 
-  /* Os pratos que a pessoa cadastrou ficam disponiveis em todas as refeicoes
-     do retiro, nao so naquela onde foram criados: cardapio de retiro repete
-     prato entre refeicoes o tempo todo. */
-  grupo('Do seu cardápio', pratosCustom,
-    '<button type="button" class="chip novo-prato" data-criar="' + indice + '">'
-    + '+ criar prato</button>');
+  out += '<div class="grupo"><div class="chips">'
+    + '<button type="button" class="chip novo-prato" data-criar="' + indice + '">'
+    + '+ outro prato desta refeição</button></div></div>';
 
   return out;
 }
 
 function renderRefeicoes(){
   var box = document.getElementById('refeicoes');
+  var ajuda = document.getElementById('ajuda-refeicoes');
+  var titulo = document.getElementById('titulo-refeicoes');
+
+  if (!refeicoes.length){
+    box.innerHTML = '';
+    titulo.textContent = '2. As refeições';
+    ajuda.textContent = 'Monte o período acima e as refeições aparecem aqui.';
+    return;
+  }
+
+  titulo.textContent = '2. As ' + refeicoes.length + ' refeições do período';
+  ajuda.textContent = 'São ' + refeicoes.length + ' refeições em '
+    + diasDoPeriodo(refeicoes) + ' dias. Marque o que vai ser servido em cada uma, '
+    + 'podendo marcar mais de uma opção por grupo.';
+
   box.innerHTML = refeicoes.map(function(r, i){
     return '<div class="refeicao">'
       + '<div class="refeicao-topo">'
       +   '<input class="ref-nome" data-ref="' + i + '" value="' + esc(r.nome) + '"'
-      +     ' placeholder="Almoço de sábado" aria-label="nome da refeição">'
+      +     ' aria-label="nome da refeição">'
       +   '<button class="kill" data-remove="' + i + '" aria-label="remover refeição">×</button>'
       + '</div>'
-      + chipsDePratos(i)
+      + chipsDaRefeicao(i)
       + '</div>';
   }).join('');
 
@@ -209,11 +276,20 @@ function renderRefeicoes(){
     });
   });
   Array.prototype.forEach.call(box.querySelectorAll('[data-criar]'), function(b){
-    b.addEventListener('click', function(){
-      abrirEditorPrato(+b.getAttribute('data-criar'));
-    });
+    b.addEventListener('click', function(){ abrirEditorPrato(+b.getAttribute('data-criar')); });
   });
 }
+
+document.getElementById('addref').addEventListener('click', function(){
+  var ultima = refeicoes[refeicoes.length - 1];
+  refeicoes.push({
+    dia: ultima ? ultima.dia : 'Sábado',
+    tipo: ultima ? ultima.tipo : 'almoco',
+    nome: 'Refeição extra',
+    pratos: []
+  });
+  renderRefeicoes(); atualizarPrevia();
+});
 
 /* ---------- editor de prato personalizado ---------- */
 
@@ -222,16 +298,10 @@ function linhaIngrediente(v){
   return '<div class="pc-linha">'
     + '<input class="pc-n" placeholder="Ingrediente" value="' + esc(v.n || '') + '" autocomplete="off">'
     + '<select class="pc-sec" aria-label="seção do mercado">'
-    +   SECOES.map(function(s){
-          return '<option' + (v.sec === s.t ? ' selected' : '') + '>' + esc(s.t) + '</option>';
-        }).join('')
+    +   opcoes(SECOES, v.sec, function(s){ return s.t; }, function(s){ return s.t; })
     + '</select>'
     + '<input class="pc-q" inputmode="decimal" placeholder="0" value="' + esc(v.q || '') + '" aria-label="quantidade">'
-    + '<select class="pc-un" aria-label="unidade">'
-    +   UNIDADES.map(function(u){
-          return '<option' + (v.un === u ? ' selected' : '') + '>' + esc(u) + '</option>';
-        }).join('')
-    + '</select>'
+    + '<select class="pc-un" aria-label="unidade">' + opcoes(UNIDADES, v.un || 'kg') + '</select>'
     + '<button type="button" class="kill pc-tira" aria-label="remover ingrediente">×</button>'
     + '</div>';
 }
@@ -248,8 +318,12 @@ function addLinha(v){
 
 function abrirEditorPrato(indiceRefeicao){
   editandoRefeicao = indiceRefeicao;
+  var ref = refeicoes[indiceRefeicao];
   document.getElementById('pc-nome').value = '';
-  document.getElementById('pc-base').value = dadosDoForm().pessoas;
+  document.getElementById('pc-base').value = pessoasDoForm();
+  /* já sugere o grupo mais provável para aquele tipo de refeição */
+  document.getElementById('pc-grupo').value =
+    (ref && (ref.tipo === 'cafe' || ref.tipo === 'lanche')) ? 'Pães e bolos' : 'Prato principal';
   document.getElementById('pc-ing').innerHTML = '';
   addLinha(); addLinha(); addLinha();
   document.getElementById('editor-fundo').style.display = '';
@@ -261,7 +335,9 @@ function fecharEditorPrato(){
   editandoRefeicao = null;
 }
 
-document.getElementById('pc-add').addEventListener('click', function(){ addLinha().querySelector('.pc-n').focus(); });
+document.getElementById('pc-add').addEventListener('click', function(){
+  addLinha().querySelector('.pc-n').focus();
+});
 document.getElementById('pc-cancelar').addEventListener('click', fecharEditorPrato);
 document.getElementById('editor-fundo').addEventListener('click', function(e){
   if (e.target.id === 'editor-fundo') fecharEditorPrato();
@@ -284,7 +360,12 @@ document.getElementById('pc-salvar').addEventListener('click', function(){
     };
   });
 
-  var prato = montarPratoCustom(nome, document.getElementById('pc-base').value, ingredientes);
+  var prato = montarPratoCustom(
+    nome,
+    document.getElementById('pc-base').value,
+    ingredientes,
+    document.getElementById('pc-grupo').value
+  );
   if (!prato){
     alert('Ponha ao menos um ingrediente com nome e quantidade maior que zero.');
     return;
@@ -299,6 +380,51 @@ document.getElementById('pc-salvar').addEventListener('click', function(){
   atualizarPrevia();
   toast('"' + prato.nome + '" entrou no cardápio');
 });
+
+/* ---------- prévia ---------- */
+
+function pessoasDoForm(){
+  return Math.max(1, parseInt(document.getElementById('pessoas').value, 10) || 1);
+}
+
+function temPrato(){
+  return refeicoes.some(function(r){ return r.pratos.length; });
+}
+
+function atualizarPrevia(){
+  var st = document.getElementById('status');
+  var resumo = document.getElementById('previa-resumo');
+
+  if (!temPrato()){
+    document.getElementById('previa').innerHTML = '';
+    resumo.textContent = refeicoes.length
+      ? 'Marque o que vai ser servido para ver a prévia da lista.'
+      : 'Monte o período acima para começar.';
+    st.textContent = refeicoes.length ? 'nada marcado ainda' : 'monte o período acima';
+    return;
+  }
+
+  var pessoas = pessoasDoForm();
+  var lista = gerarLista(pessoas, refeicoes, extrasMarcados, pratosCustom);
+  var n = contarItens(lista);
+  resumo.textContent = n + ' itens para ' + pessoas + ' pessoas, '
+    + refeicoes.length + ' refeições em ' + diasDoPeriodo(refeicoes) + ' dias.';
+  st.textContent = n + ' itens prontos';
+
+  document.getElementById('previa').innerHTML = lista.map(function(sec){
+    return '<div class="previa-sec">'
+      + '<span class="dot" style="background:' + esc(sec.h) + '"></span>'
+      + '<b>' + esc(sec.t) + '</b>'
+      + '<span class="previa-n">' + sec.i.length + '</span>'
+      + '<div class="previa-itens">'
+      +   sec.i.map(function(it){ return esc(it.q) + ' ' + esc(it.n); }).join('  ·  ')
+      + '</div></div>';
+  }).join('');
+}
+
+document.getElementById('pessoas').addEventListener('input', atualizarPrevia);
+
+/* ---------- extras ---------- */
 
 function renderExtras(){
   document.getElementById('extras').innerHTML = EXTRAS.map(function(e){
@@ -318,64 +444,13 @@ function renderExtras(){
   });
 }
 
-/* ---------- prévia ---------- */
+/* ---------- gerar ---------- */
 
-function dadosDoForm(){
-  return {
-    pessoas: parseInt(document.getElementById('pessoas').value, 10) || 1,
-    dias: parseInt(document.getElementById('dias').value, 10) || 1
-  };
+function rotuloDoPeriodo(){
+  if (!refeicoes.length) return '';
+  var a = refeicoes[0], b = refeicoes[refeicoes.length - 1];
+  return a.nome.toLowerCase() + ' até ' + b.nome.toLowerCase();
 }
-
-function temPrato(){
-  return refeicoes.some(function(r){ return r.pratos.length; });
-}
-
-function atualizarPrevia(){
-  var f = dadosDoForm();
-  var st = document.getElementById('status');
-  var resumo = document.getElementById('previa-resumo');
-
-  if (!temPrato()){
-    document.getElementById('previa').innerHTML = '';
-    resumo.textContent = 'Monte pelo menos uma refeição para ver a prévia.';
-    st.textContent = 'nenhuma refeição montada ainda';
-    return;
-  }
-
-  var lista = gerarLista(f.pessoas, f.dias, refeicoes, extrasMarcados, pratosCustom);
-  var n = contarItens(lista);
-  resumo.textContent = n + ' itens para ' + f.pessoas + ' pessoas em ' + f.dias
-    + (f.dias > 1 ? ' dias' : ' dia') + ', divididos em ' + lista.length + ' seções do mercado.';
-  st.textContent = n + ' itens prontos';
-
-  document.getElementById('previa').innerHTML = lista.map(function(sec){
-    return '<div class="previa-sec">'
-      + '<span class="dot" style="background:' + esc(sec.h) + '"></span>'
-      + '<b>' + esc(sec.t) + '</b>'
-      + '<span class="previa-n">' + sec.i.length + '</span>'
-      + '<div class="previa-itens">'
-      +   sec.i.map(function(it){ return esc(it.q) + ' ' + esc(it.n); }).join('  ·  ')
-      + '</div></div>';
-  }).join('');
-}
-
-/* ---------- montar e salvar ---------- */
-
-function novaRefeicao(nome, pratos){
-  refeicoes.push({nome: nome || '', pratos: pratos || []});
-}
-
-document.getElementById('addref').addEventListener('click', function(){
-  novaRefeicao('', []);
-  renderRefeicoes(); atualizarPrevia();
-  var campos = document.querySelectorAll('.ref-nome');
-  if (campos.length) campos[campos.length - 1].focus();
-});
-
-['pessoas','dias'].forEach(function(id){
-  document.getElementById(id).addEventListener('input', atualizarPrevia);
-});
 
 document.getElementById('gerar').addEventListener('click', function(){
   var nome = document.getElementById('nome').value.trim();
@@ -385,70 +460,55 @@ document.getElementById('gerar').addEventListener('click', function(){
     return;
   }
   if (!temPrato()){
-    alert('Monte pelo menos uma refeição com um prato marcado.');
+    alert('Marque pelo menos um prato em alguma refeição.');
     return;
   }
 
-  var f = dadosDoForm();
+  var pessoas = pessoasDoForm();
   var id = ID || gerarId(nome);
 
-  /* Regerar recalcula tudo, entao quantidade editada na mao se perde. As
-     marcacoes do que ja foi comprado nao: seria cruel zerar o carrinho de
-     quem esta no meio do mercado, entao elas sao transportadas por nome. */
+  /* Regerar recalcula tudo, então quantidade editada na mão se perde. As
+     marcações do que já foi comprado não: seria cruel zerar o carrinho de
+     quem está no meio do mercado, então elas são transportadas por nome. */
   var marcados = {};
   if (ID){
     var anterior = null;
-    try { anterior = JSON.parse(lsLer(chaveLista(ID)) || "null"); } catch (e) {}
-    if (anterior && Array.isArray(anterior.data)){
-      var editouNaMao = false;
-      anterior.data.forEach(function(sec){
+    try { anterior = JSON.parse(lsLer(chaveLista(ID)) || 'null'); } catch (e) {}
+    if (anterior && anterior.data){
+      normalizarSecoes(anterior.data).forEach(function(sec){
         sec.i.forEach(function(it){ if (it.done) marcados[it.n] = true; });
       });
-      var antigos = gerarLista(
-        parseInt(anterior.meta && anterior.meta.pessoas, 10) || f.pessoas,
-        (anterior.cardapio && anterior.cardapio.dias) || f.dias,
-        (anterior.cardapio && anterior.cardapio.refeicoes) || [],
-        (anterior.cardapio && anterior.cardapio.extras) || [],
-        (anterior.cardapio && anterior.cardapio.pratosCustom) || []
-      );
-      var mapaAntigo = {};
-      antigos.forEach(function(sec){ sec.i.forEach(function(it){ mapaAntigo[it.n] = it.q; }); });
-      anterior.data.forEach(function(sec){
-        sec.i.forEach(function(it){
-          if (mapaAntigo[it.n] !== undefined && mapaAntigo[it.n] !== it.q) editouNaMao = true;
-        });
-      });
-      var aviso = editouNaMao
-        ? 'Regerar recalcula todas as quantidades a partir do cardápio, e você '
-          + 'editou algumas na mão. Essas edições se perdem.\n\n'
-          + 'O que já foi marcado como comprado continua marcado.\n\n'
-          + 'Regerar mesmo assim?'
-        : 'Regerar recalcula todas as quantidades a partir do cardápio.\n\n'
-          + 'O que já foi marcado como comprado continua marcado.\n\n'
-          + 'Continuar?';
-      if (!confirm(aviso)) return;
+      if (!confirm('Regerar recalcula todas as quantidades a partir do cardápio.\n\n'
+          + 'Quantidade que tiver sido editada na mão se perde. O que já foi '
+          + 'marcado como comprado continua marcado.\n\nContinuar?')) return;
     }
   }
-  var meta = {
-    nome: nome,
-    pessoas: String(f.pessoas),
-    refeicoes: String(refeicoes.length),
-    periodo: document.getElementById('periodo').value.trim(),
-    criadoEm: Date.now()
-  };
-  var listaNova = gerarLista(f.pessoas, f.dias, refeicoes, extrasMarcados, pratosCustom);
+
+  var listaNova = gerarLista(pessoas, refeicoes, extrasMarcados, pratosCustom);
   listaNova.forEach(function(sec){
     sec.i.forEach(function(it){ if (marcados[it.n]) it.done = true; });
   });
 
+  var meta = {
+    nome: nome,
+    pessoas: String(pessoas),
+    refeicoes: String(refeicoes.length),
+    periodo: rotuloDoPeriodo(),
+    criadoEm: Date.now()
+  };
   var pacote = {
     v: Date.now(),
     data: listaNova,
-    obs: MODELO_OBS,
+    obs: '',
     meta: meta,
     origem: 'cardapio',
-    /* guardado para dar para reabrir e recalcular depois */
-    cardapio: {dias: f.dias, refeicoes: refeicoes, extras: extrasMarcados, pratosCustom: pratosCustom}
+    /* guardado para dar para reabrir, recalcular e imprimir por refeição */
+    cardapio: {
+      periodo: periodoDoForm(),
+      refeicoes: refeicoes,
+      extras: extrasMarcados,
+      pratosCustom: pratosCustom
+    }
   };
 
   var indice = {};
@@ -473,24 +533,32 @@ document.getElementById('gerar').addEventListener('click', function(){
 
 /* ---------- partida ---------- */
 
-/* Preenche a tela a partir de um pacote de retiro, venha ele do localStorage
-   ou do banco. Devolve true se achou um cardápio de verdade para editar. */
 function preencherDe(pkg){
   if (!pkg) return false;
 
   if (pkg.meta){
     document.getElementById('nome').value = pkg.meta.nome || '';
     document.getElementById('pessoas').value = pkg.meta.pessoas || 45;
-    document.getElementById('periodo').value = pkg.meta.periodo || '';
   }
   if (!pkg.cardapio) return false;
 
-  document.getElementById('dias').value = pkg.cardapio.dias || 3;
-  refeicoes = comoArray(pkg.cardapio.refeicoes).map(function(r){
-    return {nome: r.nome || '', pratos: comoArray(r.pratos)};
+  var c = pkg.cardapio;
+  if (c.periodo){
+    document.getElementById('dia-ini').value  = c.periodo.diaIni  || 'Sábado';
+    document.getElementById('tipo-ini').value = c.periodo.tipoIni || 'almoco';
+    document.getElementById('dia-fim').value  = c.periodo.diaFim  || 'Segunda';
+    document.getElementById('tipo-fim').value = c.periodo.tipoFim || 'almoco';
+  }
+  refeicoes = comoArray(c.refeicoes).map(function(r){
+    return {
+      dia: r.dia || '',
+      tipo: r.tipo || 'almoco',
+      nome: r.nome || '',
+      pratos: comoArray(r.pratos)
+    };
   });
-  extrasMarcados = comoArray(pkg.cardapio.extras);
-  pratosCustom = comoArray(pkg.cardapio.pratosCustom).map(function(p){
+  extrasMarcados = comoArray(c.extras);
+  pratosCustom = comoArray(c.pratosCustom).map(function(p){
     p.ing = comoArray(p.ing);
     return p;
   });
@@ -500,46 +568,27 @@ function preencherDe(pkg){
   return true;
 }
 
-function esqueletoDeFimDeSemana(){
-  novaRefeicao('Almoço de sábado',  ['salsichao','maionese','sobremesa-doce']);
-  novaRefeicao('Jantar de sábado',  ['massa-guisado']);
-  novaRefeicao('Café de domingo',   ['cafe-pao-pate','cafe-bolo']);
-  novaRefeicao('Almoço de domingo', ['carreteiro','feijao','salada-verde','sobremesa-gelatina']);
-}
-
 function iniciar(){
+  montarSelects();
   renderExtras();
+  renderRefeicoes();
+  atualizarPrevia();
 
-  if (!ID){
-    /* Retiro novo abre com um esqueleto de fim de semana, para a pessoa ter
-       algo concreto para editar em vez de encarar uma tela em branco. */
-    esqueletoDeFimDeSemana();
-    renderRefeicoes();
-    atualizarPrevia();
-    return;
-  }
+  if (!ID) return;
 
   document.getElementById('gerar').textContent = 'Regerar a lista';
 
-  var achou = false;
   var t = lsLer(chaveLista(ID));
   if (t){
-    try { achou = preencherDe(JSON.parse(t)); } catch (e) {}
-  }
-  if (!achou){
-    esqueletoDeFimDeSemana();
-    renderRefeicoes();
-    atualizarPrevia();
+    try { preencherDe(JSON.parse(t)); } catch (e) {}
   }
 
   /* O localStorage é só um atalho: em outro aparelho, ou depois de limpar o
      navegador, o cardápio só existe no banco. Sem esta busca, reabrir para
-     recalcular abriria a tela em branco e apagaria o cardápio ao gerar. */
+     recalcular abriria em branco e o gerar apagaria o cardápio. */
   if (temSync()){
     dbGet('retiros/' + ID).then(function(pkg){
-      if (!pkg) return;
-      var tinhaCardapio = preencherDe(pkg);
-      if (tinhaCardapio) lsGravar(chaveLista(ID), JSON.stringify(pkg));
+      if (pkg && preencherDe(pkg)) lsGravar(chaveLista(ID), JSON.stringify(pkg));
     }).catch(function(){});
   }
 }

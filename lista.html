@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lista de compras</title>
-<link rel="stylesheet" href="app.css?v=7">
+<link rel="stylesheet" href="app.css?v=8">
 </head><body>
 
 <div class="wrap">
@@ -30,6 +30,7 @@
   <div class="close">
     <b>Observações da cozinha</b>
     <div id="obs" contenteditable="true"></div>
+    <a class="botao-alt js-only" id="ver-refeicoes" href="#" style="display:none">Ver e imprimir os insumos por refeição</a>
     <a class="botao-alt js-only" id="editar-cardapio" href="#" style="display:none">Editar o cardápio e recalcular</a>
     <button class="reset js-only" id="reset">Restaurar lista original</button>
   </div>
@@ -54,9 +55,9 @@
   <span id="status">tudo salvo</span>
 </div>
 
-<script src="config.js?v=7"></script>
-<script src="modelo.js?v=7"></script>
-<script src="receitas.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="modelo.js?v=8"></script>
+<script src="receitas.js?v=8"></script>
 <script>
 document.documentElement.className = '';
 
@@ -166,11 +167,14 @@ function paint(){
 function mostrarLinkCardapio(){
   var a = document.getElementById('editar-cardapio');
   if (!a) return;
+  var v = document.getElementById('ver-refeicoes');
   if (cardapio){
     a.href = 'cardapio.html?r=' + encodeURIComponent(ID);
     a.style.display = '';
+    if (v){ v.href = 'refeicoes.html?r=' + encodeURIComponent(ID); v.style.display = ''; }
   } else {
     a.style.display = 'none';
+    if (v) v.style.display = 'none';
   }
 
   /* O rotulo do botao acompanha o que ele realmente faz */
@@ -349,7 +353,7 @@ document.getElementById('reset').addEventListener('click', function(){
     alvo = secoesVazias();
     aviso = 'Esvaziar a lista e deixar so as secoes do mercado? Os itens que voces puseram se perdem.';
   } else if (cardapio){
-    alvo = gerarLista(parseInt(meta.pessoas, 10) || 1, cardapio.dias || 1, cardapio.refeicoes || [], cardapio.extras || [], cardapio.pratosCustom || []);
+    alvo = gerarLista(parseInt(meta.pessoas, 10) || 1, cardapio.refeicoes || [], cardapio.extras || [], cardapio.pratosCustom || []);
     aviso = 'Recalcular a lista a partir do cardapio? As edicoes feitas na mao se perdem.';
   } else {
     alvo = JSON.parse(JSON.stringify(MODELO));

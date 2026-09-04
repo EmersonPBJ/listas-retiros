@@ -405,3 +405,41 @@
   .pc-linha .pc-un,.pc-linha .pc-tira{grid-column:auto;}
 }
 @media print{ .editor-fundo{display:none !important;} }
+
+/* ---------- selects do periodo ---------- */
+.novo select,.editor select{
+  width:100%;font-family:inherit;font-size:15px;padding:10px;
+  border:1px solid #c3ccc7;border-radius:7px;background:#fff;color:var(--ink);
+}
+
+/* ---------- insumos por refeicao ---------- */
+.ref-bloco{margin-top:26px;break-inside:avoid;page-break-inside:avoid;}
+.ref-bloco .head{position:static;}
+.ref-pratos{
+  margin:9px 0 4px;font-size:13.5px;color:var(--green);font-weight:600;
+  line-height:1.5;
+}
+ul.insumos{list-style:none;margin:0;padding:0;}
+ul.insumos li{
+  display:flex;align-items:baseline;gap:9px;
+  padding:9px 0;border-bottom:1px solid var(--line);
+}
+ul.insumos b{
+  font-size:16px;font-weight:800;letter-spacing:-.02em;
+  min-width:78px;text-align:right;flex:none;
+}
+.ins-dot{
+  width:8px;height:8px;border-radius:50%;flex:none;
+  position:relative;top:-2px;
+}
+.ins-n{flex:1;min-width:0;font-size:15px;line-height:1.35;}
+.ins-n small{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;}
+
+@media print{
+  ul.insumos li{padding:4pt 0;border-bottom:1px solid #ddd;}
+  ul.insumos b{font-size:11pt;min-width:60pt;}
+  .ins-n{font-size:10.5pt;}
+  .ins-n small{font-size:8.5pt;color:#555;}
+  .ref-pratos{color:#000;font-size:10pt;}
+  .ref-bloco .head{border-bottom:1px solid #999;}
+}

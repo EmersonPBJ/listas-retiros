@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="no-js"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insumos por refeição</title>
+<link rel="stylesheet" href="app.css?v=8">
+</head><body>
+
+<div class="wrap">
+  <a class="back js-only" id="voltar" href="./">&larr; voltar para a lista</a>
+
+  <div class="top">
+    <h1 id="titulo">Insumos por refeição</h1>
+    <p class="facts" id="fatos"></p>
+    <p class="hint js-only">
+      O que separar para cada refeição. A lista do mercado junta tudo; esta
+      folha é para a cozinha no dia.
+    </p>
+    <p class="impresso" id="impresso"></p>
+  </div>
+
+  <div id="conteudo"></div>
+
+  <div class="sign">
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+      <g stroke="#9BC65D" stroke-width="2.1" stroke-linecap="round">
+        <line x1="12" y1="2.5" x2="12" y2="21.5"/>
+        <line x1="3.8" y1="7.25" x2="20.2" y2="16.75"/>
+        <line x1="3.8" y1="16.75" x2="20.2" y2="7.25"/>
+      </g>
+    </svg>
+    <p>uma contribuição <b>raiseUP</b> para os retiros da igreja</p>
+  </div>
+</div>
+
+<div class="savebar js-only">
+  <button id="print">Imprimir ou PDF</button>
+  <span id="status"></span>
+</div>
+
+<script src="config.js?v=8"></script>
+<script src="receitas.js?v=8"></script>
+<script>
+document.documentElement.className = '';
+
+var ID = (function(){
+  var m = location.search.match(/[?&]r=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+})();
+if (!ID){ location.replace('./'); }
+
+document.getElementById('voltar').href = 'lista.html?r=' + encodeURIComponent(ID);
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function corDaSecao(nome){
+  for (var i = 0; i < SECOES.length; i++){
+    if (SECOES[i].t === nome) return SECOES[i].h;
+  }
+  return '#475569';
+}
+
+function render(pkg){
+  var meta = pkg.meta || {};
+  document.getElementById('titulo').textContent = meta.nome || 'Insumos por refeição';
+  document.title = (meta.nome || 'Retiro') + ' | insumos por refeição';
+
+  var partes = [];
+  if (meta.pessoas) partes.push('<span><b>' + esc(meta.pessoas) + '</b> pessoas</span>');
+  if (meta.periodo) partes.push('<span>' + esc(meta.periodo) + '</span>');
+  document.getElementById('fatos').innerHTML = partes.join('');
+
+  var c = pkg.cardapio;
+  if (!c){
+    document.getElementById('conteudo').innerHTML =
+      '<div class="vazio">Esta lista não foi montada pelo cardápio, então não dá'
+      + ' para separar os insumos por refeição.<br>Só listas geradas em'
+      + ' "Montar o cardápio" têm essa informação.</div>';
+    document.getElementById('status').textContent = 'sem cardápio';
+    return;
+  }
+
+  var refeicoes = comoArray(c.refeicoes).map(function(r){
+    return {dia:r.dia, tipo:r.tipo, nome:r.nome, pratos: comoArray(r.pratos)};
+  });
+  var custom = comoArray(c.pratosCustom).map(function(p){ p.ing = comoArray(p.ing); return p; });
+  var pessoas = parseInt(meta.pessoas, 10) || 1;
+
+  var porRef = gerarPorRefeicao(pessoas, refeicoes, custom);
+  var comItens = porRef.filter(function(r){ return r.itens.length; });
+
+  document.getElementById('status').textContent =
+    comItens.length + ' de ' + porRef.length + ' refeições com cardápio definido';
+
+  document.getElementById('conteudo').innerHTML = porRef.map(function(r){
+    var cabeca = '<div class="head"><span class="dot" style="background:var(--green)"></span>'
+      + '<h2>' + esc(r.nome) + '</h2>'
+      + '<span class="tally">' + r.itens.length + ' itens</span></div>';
+
+    if (!r.pratos.length){
+      return '<section class="ref-bloco">' + cabeca
+        + '<p class="ajuda">Nada foi marcado para esta refeição.</p></section>';
+    }
+
+    return '<section class="ref-bloco">' + cabeca
+      + '<p class="ref-pratos">' + esc(r.pratos.join('  ·  ')) + '</p>'
+      + '<ul class="insumos">'
+      +   r.itens.map(function(it){
+            return '<li>'
+              + '<span class="ins-dot" style="background:' + esc(corDaSecao(it.sec)) + '"></span>'
+              + '<b>' + esc(it.q) + '</b>'
+              + '<span class="ins-n">' + esc(it.n)
+              +   '<small>' + esc(it.pratos) + '</small>'
+              + '</span></li>';
+          }).join('')
+      + '</ul></section>';
+  }).join('');
+}
+
+document.getElementById('print').addEventListener('click', function(){
+  var d = new Date();
+  document.getElementById('impresso').textContent =
+    'Impresso em ' + d.toLocaleDateString('pt-BR') + ' às '
+    + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  window.print();
+});
+
+function iniciar(){
+  var t = lsLer(chaveLista(ID));
+  if (t){
+    try { render(JSON.parse(t)); } catch (e) {}
+  }
+  if (temSync()){
+    dbGet('retiros/' + ID).then(function(pkg){ if (pkg) render(pkg); }).catch(function(){});
+  }
+}
+
+iniciar();
+</script>
+</body></html>
