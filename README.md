@@ -311,20 +311,23 @@ A chave do KV é o mês corrente, então o contador zera sozinho na virada e os
 meses velhos somem com o TTL. O contador só anda em chamada que realmente
 chegou na IA e voltou: erro de chave ou de rede não consome cota.
 
-Cada consulta é uma chamada ao `claude-opus-5`. **Medido na prática, não
-estimado: cerca de US$ 0,09 por consulta**, com `effort: low`. Uma estimativa
-anterior de "centavos por retiro" estava errada por umas três vezes, porque
-ignorava os tokens de raciocínio, que são cobrados como saída.
+O modelo usado está em `MODELO_IA`, no `worker/wrangler.toml`, hoje
+`claude-haiku-4-5`. O código ajusta os parâmetros conforme o modelo: Haiku 4.5
+é da geração anterior e **rejeita `effort`**, e não tem raciocínio adaptativo;
+Opus 5 aceita os dois. Trocar o valor da variável basta, o resto se acerta
+sozinho.
 
-Montar um retiro gasta entre 5 e 15 consultas, ou seja, algo entre US$ 0,45 e
-US$ 1,35 por retiro. Dois retiros por mês ficam perto de US$ 2. Com o teto em
-60 consultas, o pior mês possível custa cerca de US$ 5.
+Custo medido em Opus 5, na prática e não estimado: cerca de **US$ 0,09 por
+consulta**. Uma estimativa anterior de "centavos por retiro" estava errada por
+uma boa margem porque ignorava os tokens de raciocínio, cobrados como saída.
+Haiku fica perto de um décimo disso.
 
-Se isso pesar, o botão de perguntar no ChatGPT faz o mesmo trabalho de graça, e
-trocar o modelo por `claude-haiku-4-5` corta o custo uma ordem de grandeza.
+Montar um retiro gasta entre 5 e 15 consultas. Em Haiku isso dá menos de US$
+0,15 por retiro; em Opus 5, entre US$ 0,45 e US$ 1,35.
 
-Vale pôr também um limite de gasto no painel da Anthropic, em Billing: é a
-segunda trava, independente desta, e é grátis de configurar.
+Há uma rede de segurança no `chamarIA()`: se o modelo recusar o structured
+output com 400, ele repete pedindo o JSON por instrução e extrai na mão. Menos
+garantido, mas melhor que falhar.
 
 ## Cache dos arquivos
 

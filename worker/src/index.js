@@ -107,29 +107,69 @@ async function contarUso(env){
    obedece ao esquema, entao o JSON.parse aqui e seguro. Uma retentativa
    cobre a falha de rede solta, que acontece. */
 
-async function chamarIA(client, esquema, sistema, pergunta){
-  async function uma(){
-    const stream = client.messages.stream({
-      model: 'claude-opus-5',
+async function chamarIA(client, esquema, sistema, pergunta, modelo){
+  modelo = modelo || 'claude-haiku-4-5';
+
+  /* Haiku 4.5 e da geracao anterior: effort da erro nele, e raciocinio
+     adaptativo nao existe. Opus 5 aceita os dois. A configuracao segue o
+     modelo para dar para trocar no wrangler.toml sem mexer no codigo. */
+  const geracaoNova = /^claude-(opus-5|opus-4-[678]|sonnet-5|sonnet-4-6|fable)/.test(modelo);
+
+  function base(){
+    const p = {
+      model: modelo,
       max_tokens: 8000,
       system: sistema,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: 'low', format: zodOutputFormat(esquema) },
       messages: [{ role: 'user', content: pergunta }]
-    });
-    const msg = await stream.finalMessage();
+    };
+    if (geracaoNova){
+      p.thinking = { type: 'adaptive' };
+      p.output_config = { effort: 'low' };
+    }
+    return p;
+  }
+
+  /* Caminho bom: a API garante o formato pelo esquema. */
+  async function comEsquema(){
+    const p = base();
+    p.output_config = Object.assign({}, p.output_config, { format: zodOutputFormat(esquema) });
+    const msg = await client.messages.stream(p).finalMessage();
     if (msg.stop_reason === 'refusal') return { recusou: true };
-    const texto = (msg.content || [])
+    return { dados: JSON.parse(textoDe(msg)) };
+  }
+
+  /* Rede de seguranca: se o modelo nao suportar structured output, pede o JSON
+     por instrucao e extrai na mao. Menos garantido, mas melhor que nao ter. */
+  async function semEsquema(){
+    const p = base();
+    p.system = sistema
+      + '\n\nResponda SÓ com JSON válido, sem texto em volta e sem cerca de código.';
+    const msg = await client.messages.stream(p).finalMessage();
+    if (msg.stop_reason === 'refusal') return { recusou: true };
+    const t = textoDe(msg);
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a < 0 || b <= a) throw new Error('resposta sem JSON');
+    return { dados: JSON.parse(t.slice(a, b + 1)) };
+  }
+
+  function textoDe(msg){
+    return (msg.content || [])
       .filter(function(b){ return b.type === 'text'; })
       .map(function(b){ return b.text; })
       .join('');
-    return { dados: JSON.parse(texto) };
   }
 
-  try { return await uma(); }
-  catch (e) {
-    if (e && e.status) throw e;   /* erro da API: nao adianta insistir */
-    return await uma();           /* falha de rede: uma segunda chance */
+  try {
+    return await comEsquema();
+  } catch (e) {
+    /* 400 aqui costuma ser parametro que o modelo nao aceita. Vale tentar o
+       caminho simples antes de desistir. Outros erros de API nao adianta. */
+    if (e && e.status === 400) {
+      console.error('esquema recusado, tentando sem:', String(e.message).slice(0, 200));
+      return await semEsquema();
+    }
+    if (e && e.status) throw e;
+    return await comEsquema();   /* falha de rede: uma segunda chance */
   }
 }
 
@@ -197,7 +237,7 @@ export default {
         const r = await chamarIA(client, EsquemaPrato, INSTRUCOES,
           `Preciso servir "${prato}" para ${pessoas} pessoas num retiro.`
           + ` Liste os ingredientes com a quantidade total para essas ${pessoas} pessoas.`
-          + (corpo.refeicao ? ` É para o ${corpo.refeicao}.` : ''));
+          + (corpo.refeicao ? ` É para o ${corpo.refeicao}.` : ''), env.MODELO_IA);
 
         if (r.recusou) {
           return json({ erro: 'O modelo não respondeu a este pedido.' }, 422, cors);
@@ -228,7 +268,7 @@ ${itens.join(', ')}
 `
           + `Revise procurando o que vai faltar na hora: tempero que ninguém lembra, `
           + `ingrediente de um prato que ficou de fora, refeição sem nada definido, `
-          + `quantidade que parece errada. Seja específico e curto.`);
+          + `quantidade que parece errada. Seja específico e curto.`, env.MODELO_IA);
 
         if (r.recusou) {
           return json({ erro: 'O modelo não respondeu a este pedido.' }, 422, cors);

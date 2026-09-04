@@ -14,6 +14,12 @@ ORIGENS_PERMITIDAS = "https://emersonpbj.github.io,http://localhost:4199,http://
 # cobre com folga os 2 retiros por mes esperados.
 TETO_MENSAL = "60"
 
+# Modelo usado nas sugestoes. Haiku custa cerca de dez vezes menos que o
+# Opus e da conta de calcular quantidade e lembrar de tempero. Para voltar
+# ao mais capaz, troque por claude-opus-5: o codigo ajusta os parametros
+# sozinho, porque as duas geracoes aceitam coisas diferentes.
+MODELO_IA = "claude-haiku-4-5"
+
 # A chave da API NAO fica aqui. Ela e um secret, guardado cifrado na
 # Cloudflare, e se configura com:
 #     npx wrangler secret put ANTHROPIC_API_KEY
